@@ -454,10 +454,16 @@
   window.addEventListener('keydown', (e) => {
     keys[e.key.toLowerCase()] = true;
     keys[e.code] = true;
+    // Чат по Enter
     if (e.key === 'Enter' && document.activeElement !== document.getElementById('chat-input')) {
       toggleChat();
     }
-    if (e.key === 'Escape' && chatVisible) toggleChat();
+    // Закрыть чат по Escape
+    if (e.key === 'Escape' && chatVisible) {
+      toggleChat();
+    }
+    // Отладка
+    console.log('Key down:', e.key);
   });
   window.addEventListener('keyup', (e) => {
     keys[e.key.toLowerCase()] = false;
@@ -466,7 +472,7 @@
 
   let isPointerLocked = false;
   
-  // Захват мыши через клик (работает и во фрейме)
+  // Захват мыши через клик
   function requestPointerLock() {
     renderer.domElement.requestPointerLock();
     if (isInFrame) {
@@ -599,12 +605,22 @@
   function toggleChat() {
     chatVisible = !chatVisible;
     chatEl.style.display = chatVisible ? 'flex' : 'none';
-    if (chatVisible) chatInput.focus();
+    if (chatVisible) {
+      chatInput.focus();
+    } else {
+      chatInput.blur();
+      renderer.domElement.focus();
+    }
   }
 
   chatToggle.addEventListener('click', toggleChat);
   chatSend.addEventListener('click', sendChat);
-  chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sendChat();
+    }
+  });
 
   function sendChat() {
     const text = chatInput.value.trim();
@@ -614,6 +630,7 @@
       socket.send(JSON.stringify({ type: 'chat', text }));
     }
     chatInput.value = '';
+    // Не закрываем чат после отправки
   }
 
   function addChatMessage(name, text, color = '#00f3ff') {
@@ -742,11 +759,9 @@
     if (keys['a'] || keys['arrowleft']) moveX -= 1;
     if (keys['d'] || keys['arrowright']) moveX += 1;
     
-    // Мобильный джойстик (если активен)
-    if (Math.abs(touchMove.x) > 0.05 || Math.abs(touchMove.y) > 0.05) {
-      moveX += touchMove.x;
-      moveZ += touchMove.y;
-    }
+    // Мобильный джойстик (всегда добавляется, даже если 0)
+    moveX += touchMove.x;
+    moveZ += touchMove.y;
 
     let moved = false;
     let angle = 0;
