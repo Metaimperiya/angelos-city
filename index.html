@@ -3,122 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Angelos City — Общий мир</title>
+  <title>🚢 3D Кораблик</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { overflow: hidden; background: #020208; font-family: 'Courier New', monospace; }
-
-    /* ===== МЕНЮ ВХОДА ===== */
-    #menu {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(2, 2, 8, 0.92);
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      backdrop-filter: blur(10px);
-    }
-    #menu h1 {
-      color: #00f3ff;
-      font-size: 48px;
-      text-shadow: 0 0 30px #00f3ff, 0 0 60px #00aaff;
-      margin-bottom: 10px;
-    }
-    #menu p {
-      color: #667799;
-      font-size: 16px;
-      margin-bottom: 30px;
-    }
-    #menu input {
-      background: transparent;
-      border: 1px solid #00f3ff;
-      color: #00f3ff;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 18px;
-      text-align: center;
-      width: 280px;
-      outline: none;
-      font-family: 'Courier New', monospace;
-    }
-    #menu input::placeholder { color: #334466; }
-    #menu button {
-      background: transparent;
-      border: 1px solid #00f3ff;
-      color: #00f3ff;
-      padding: 14px 40px;
-      border-radius: 10px;
-      font-size: 18px;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-family: 'Courier New', monospace;
-      margin-top: 15px;
-    }
-    #menu button:hover {
-      background: #00f3ff;
-      color: #000;
-      box-shadow: 0 0 40px rgba(0, 243, 255, 0.3);
-    }
-
-    /* ===== ЧАТ ===== */
-    #chat {
-      position: absolute;
-      bottom: 80px;
-      left: 20px;
-      width: 320px;
-      max-height: 300px;
-      z-index: 100;
-      display: none;
-      flex-direction: column;
-      background: rgba(0, 0, 0, 0.8);
-      border: 1px solid #00f3ff;
-      border-radius: 12px;
-      padding: 10px;
-      box-shadow: 0 0 30px rgba(0, 243, 255, 0.1);
-    }
-    #chat-log {
-      flex: 1;
-      overflow-y: auto;
-      max-height: 220px;
-      color: #aabbdd;
-      font-size: 13px;
-      line-height: 1.6;
-      margin-bottom: 8px;
-      padding-right: 5px;
-    }
-    #chat-log::-webkit-scrollbar { width: 3px; }
-    #chat-log::-webkit-scrollbar-thumb { background: #00f3ff; border-radius: 3px; }
-    #chat-log .msg .name { color: #00f3ff; font-weight: bold; }
-    #chat-log .msg .text { color: #ffffff; }
-    #chat-log .system { color: #ff007f; font-style: italic; }
-    #chat-input-row { display: flex; gap: 8px; }
-    #chat-input {
-      flex: 1;
-      background: transparent;
-      border: 1px solid #334466;
-      color: #ffffff;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      outline: none;
-      font-family: 'Courier New', monospace;
-    }
-    #chat-input:focus { border-color: #00f3ff; }
-    #chat-send {
-      background: transparent;
-      border: 1px solid #00f3ff;
-      color: #00f3ff;
-      padding: 6px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-    }
-    #chat-send:hover { background: #00f3ff; color: #000; }
-
+    body { overflow: hidden; background: #020208; }
     #info {
       position: absolute;
       bottom: 20px;
@@ -126,546 +14,201 @@
       transform: translateX(-50%);
       color: #00f0ff;
       background: rgba(0,0,0,0.7);
-      padding: 6px 16px;
+      padding: 8px 20px;
       border-radius: 10px;
+      font-family: monospace;
       font-size: 12px;
       z-index: 100;
       border: 1px solid #00f0ff;
-      pointer-events: none;
-      text-align: center;
-      display: none;
     }
-    #player-count {
+    #loading {
       position: absolute;
-      top: 15px;
-      left: 20px;
-      color: #00ff88;
-      font-size: 13px;
-      z-index: 100;
-      background: rgba(0,0,0,0.7);
-      padding: 6px 14px;
-      border-radius: 8px;
-      border: 1px solid #00ff88;
-      display: none;
-    }
-    #chat-toggle {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      z-index: 99;
-      background: transparent;
-      border: 1px solid #00f3ff;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       color: #00f3ff;
-      padding: 8px 16px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      display: none;
+      font-size: 20px;
+      font-family: monospace;
+      z-index: 50;
+      text-shadow: 0 0 30px #00f3ff;
+      animation: blink 1s infinite alternate;
     }
-    #chat-toggle:hover { background: #00f3ff; color: #000; }
+    @keyframes blink {
+      0% { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
   </style>
 </head>
 <body>
 
-<!-- ===== МЕНЮ ВХОДА ===== -->
-<div id="menu">
-  <h1>🏙️ Angelos City</h1>
-  <p>Введи своё имя и заходи в общий мир</p>
-  <input id="name-input" type="text" placeholder="Твоё имя..." maxlength="16" value="Игрок">
-  <button id="btn-enter">🚀 Войти в город</button>
-</div>
-
-<!-- ===== ЧАТ ===== -->
-<div id="chat">
-  <div id="chat-log"></div>
-  <div id="chat-input-row">
-    <input id="chat-input" type="text" placeholder="Написать..." maxlength="100">
-    <button id="chat-send">➤</button>
-  </div>
-</div>
-<button id="chat-toggle">💬 Чат</button>
-
-<div id="info">🎮 WASD — ходьба | Пробел — взлёт | Shift — спуск | 🖱️ Мышь — обзор</div>
-<div id="player-count">👥 <span id="count-display">1</span></div>
+<div id="loading">⏳ Загрузка корабля...</div>
+<div id="info">🖱️ Мышь — вращать | Колесо — приблизить</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
 <script>
-// ============================================================
-// 1. СЕТЬ — ОБЩАЯ КОМНАТА (BroadcastChannel)
-// ============================================================
-const CHANNEL_NAME = 'angelos_city_world';
+  // =============================================
+  // 1. СЦЕНА
+  // =============================================
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a1a);
 
-class Network {
-  constructor(playerName) {
-    this.players = {};
-    this.myId = 'player_' + Math.random().toString(36).substr(2, 6);
-    this.playerName = playerName || 'Игрок';
-    this.listeners = {};
-    this.channel = null;
+  // =============================================
+  // 2. КАМЕРА
+  // =============================================
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(5, 3, 8);
+  camera.lookAt(0, 0, 0);
 
-    try {
-      this.channel = new BroadcastChannel(CHANNEL_NAME);
-      this.channel.onmessage = (e) => {
-        const data = e.data;
-        if (data.type === 'join') {
-          if (!this.players[data.id]) {
-            this.players[data.id] = {
-              x: data.x || 0,
-              z: data.z || 0,
-              y: data.y || 1.8,
-              name: data.name || 'Игрок'
-            };
-            this.emit('playerJoin', data.id, this.players[data.id]);
-          }
-        }
-        if (data.type === 'move') {
-          if (this.players[data.id]) {
-            this.players[data.id].x = data.x;
-            this.players[data.id].z = data.z;
-            this.players[data.id].rotation = data.rotation || 0;
-            this.emit('playerMove', data.id, this.players[data.id]);
-          }
-        }
-        if (data.type === 'leave') {
-          if (this.players[data.id]) {
-            delete this.players[data.id];
-            this.emit('playerLeave', data.id);
-          }
-        }
-        if (data.type === 'chat') {
-          this.emit('chatMessage', data.id, data.text, data.name);
-        }
-        if (data.type === 'sync') {
-          for (const [id, player] of Object.entries(data.players)) {
-            if (id !== this.myId && !this.players[id]) {
-              this.players[id] = player;
-              this.emit('playerJoin', id, player);
-            }
-          }
-        }
-      };
-    } catch (e) {
-      console.log('BroadcastChannel не поддерживается');
-    }
-
-    // Регистрируем себя
-    this.players[this.myId] = {
-      x: 0, z: 0, y: 1.8, name: this.playerName
-    };
-
-    setTimeout(() => {
-      this.broadcast({ type: 'sync', players: this.players });
-    }, 300);
-
-    this.broadcast({
-      type: 'join',
-      id: this.myId,
-      x: 0, z: 0, y: 1.8,
-      name: this.playerName
-    });
-
-    // Синхронизация каждые 3 секунды
-    setInterval(() => {
-      this.broadcast({ type: 'sync', players: this.players });
-    }, 3000);
-  }
-
-  broadcast(data) {
-    if (this.channel) {
-      try { this.channel.postMessage(data); } catch (e) {}
-    }
-  }
-
-  on(event, callback) {
-    if (!this.listeners[event]) this.listeners[event] = [];
-    this.listeners[event].push(callback);
-  }
-
-  emit(event, ...args) {
-    if (this.listeners[event]) {
-      for (const cb of this.listeners[event]) cb(...args);
-    }
-  }
-
-  sendMove(x, z, y, rotation) {
-    if (this.players[this.myId]) {
-      this.players[this.myId].x = x;
-      this.players[this.myId].z = z;
-      this.players[this.myId].y = y;
-      this.players[this.myId].rotation = rotation || 0;
-    }
-    this.broadcast({ type: 'move', id: this.myId, x, z, y, rotation: rotation || 0 });
-  }
-
-  sendChat(text) {
-    this.broadcast({ type: 'chat', id: this.myId, text, name: this.playerName });
-  }
-
-  getPlayers() { return this.players; }
-  getMyId() { return this.myId; }
-}
-
-// ============================================================
-// 2. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-// ============================================================
-let network = null;
-let myId = null;
-const remoteMeshes = {};
-let chatVisible = false;
-
-// ============================================================
-// 3. THREE.JS
-// ============================================================
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x020208);
-scene.fog = new THREE.FogExp2(0x020208, 0.018);
-
-const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 350);
-camera.position.set(0, 1.8, 25);
-camera.rotation.order = 'YXZ';
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.prepend(renderer.domElement);
-
-// Свет
-const ambient = new THREE.AmbientLight(0x222244, 1.5);
-scene.add(ambient);
-const dirLight = new THREE.DirectionalLight(0x00f0ff, 2);
-dirLight.position.set(20, 100, 20);
-scene.add(dirLight);
-const pinkLight = new THREE.PointLight(0xff007f, 5, 50);
-pinkLight.position.set(0, 4, 0);
-scene.add(pinkLight);
-
-// Пол
-const plane = new THREE.Mesh(
-  new THREE.PlaneGeometry(400, 400),
-  new THREE.MeshPhongMaterial({ color: 0x030308 })
-);
-plane.rotation.x = -Math.PI / 2;
-scene.add(plane);
-
-const grid = new THREE.GridHelper(400, 80, 0xff007f, 0x00f0ff);
-grid.position.y = 0.01;
-scene.add(grid);
-
-// Здания
-const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
-const darkMat = new THREE.MeshPhongMaterial({ color: 0x060911, flatShading: true });
-const cyanMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-const pinkMat = new THREE.MeshBasicMaterial({ color: 0xff007f });
-const yellowMat = new THREE.MeshBasicMaterial({ color: 0xffb703 });
-
-const buildings = [];
-const gridSize = 28;
-
-for (let x = -gridSize; x <= gridSize; x += 3) {
-  for (let z = -gridSize; z <= gridSize; z += 3) {
-    if (Math.abs(x) % 6 === 0 || Math.abs(z) % 6 === 0) continue;
-    const height = Math.floor(Math.random() * 32) + 12;
-    const posX = x * 1.6;
-    const posZ = z * 1.6;
-    for (let y = 0; y < height; y++) {
-      const isWindow = Math.random() < 0.12;
-      const isTop = (y === height - 1);
-      let material = darkMat;
-      if (isWindow) material = Math.random() > 0.5 ? cyanMat : pinkMat;
-      else if (isTop && Math.random() < 0.5) material = yellowMat;
-      const cube = new THREE.Mesh(cubeGeo, material);
-      cube.scale.set(2.2, 1, 2.2);
-      cube.position.set(posX, y + 0.5, posZ);
-      scene.add(cube);
-    }
-    buildings.push({ x: posX, z: posZ, halfSize: 1.1, height });
-  }
-}
-
-// ============================================================
-// 4. ПЕРСОНАЖИ
-// ============================================================
-const playerGroup = new THREE.Group();
-scene.add(playerGroup);
-
-const localPlayerGroup = new THREE.Group();
-playerGroup.add(localPlayerGroup);
-
-function createPlayerMesh(color = 0x00ff88) {
-  const group = new THREE.Group();
-  const bodyMat = new THREE.MeshPhongMaterial({ color, flatShading: true });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.6), bodyMat);
-  body.position.y = 0.7;
-  group.add(body);
-  const headMat = new THREE.MeshPhongMaterial({ color: 0xffccaa, flatShading: true });
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), headMat);
-  head.position.y = 1.5;
-  group.add(head);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-  for (let side = -1; side <= 1; side += 2) {
-    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), eyeMat);
-    eye.position.set(side * 0.2, 1.6, 0.35);
-    group.add(eye);
-    const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), pupilMat);
-    pupil.position.set(side * 0.2, 1.6, 0.45);
-    group.add(pupil);
-  }
-  return group;
-}
-
-const localMesh = createPlayerMesh(0x00ff88);
-localPlayerGroup.add(localMesh);
-
-// Стрелка над головой
-const arrowMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const arrow = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.1), arrowMat);
-arrow.position.set(0, 1.9, 0.35);
-localPlayerGroup.add(arrow);
-const arrow2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.3), arrowMat);
-arrow2.position.set(0, 1.9, 0.35);
-localPlayerGroup.add(arrow2);
-
-const remoteMeshesMap = {};
-
-function addRemotePlayer(id, color, name) {
-  const mesh = createPlayerMesh(color);
-  playerGroup.add(mesh);
-  remoteMeshesMap[id] = { mesh, color, name };
-  return mesh;
-}
-
-function removeRemotePlayer(id) {
-  if (remoteMeshesMap[id]) {
-    playerGroup.remove(remoteMeshesMap[id].mesh);
-    delete remoteMeshesMap[id];
-  }
-}
-
-// ============================================================
-// 5. КОЛЛИЗИИ
-// ============================================================
-const playerRadius = 0.8;
-
-function checkCollision(x, z) {
-  for (let b of buildings) {
-    const dx = Math.abs(x - b.x);
-    const dz = Math.abs(z - b.z);
-    if (dx < b.halfSize + playerRadius && dz < b.halfSize + playerRadius) return true;
-  }
-  return false;
-}
-
-// ============================================================
-// 6. УПРАВЛЕНИЕ
-// ============================================================
-const keys = {};
-window.addEventListener('keydown', (e) => {
-  keys[e.key.toLowerCase()] = true;
-  keys[e.code] = true;
-  if (e.key === 'Enter' && document.activeElement !== document.getElementById('chat-input')) {
-    toggleChat();
-  }
-  if (e.key === 'Escape' && chatVisible) toggleChat();
-});
-window.addEventListener('keyup', (e) => {
-  keys[e.key.toLowerCase()] = false;
-  keys[e.code] = false;
-});
-
-let isPointerLocked = false;
-document.addEventListener('click', () => {
-  if (document.getElementById('menu').style.display !== 'none') return;
-  renderer.domElement.requestPointerLock();
-});
-document.addEventListener('pointerlockchange', () => {
-  isPointerLocked = document.pointerLockElement === renderer.domElement;
-});
-document.addEventListener('mousemove', (e) => {
-  if (!isPointerLocked) return;
-  camera.rotation.y -= e.movementX * 0.002;
-  camera.rotation.x -= e.movementY * 0.002;
-  camera.rotation.x = Math.max(-1.2, Math.min(1.2, camera.rotation.x));
-});
-
-// ============================================================
-// 7. ЧАТ
-// ============================================================
-const chatLog = document.getElementById('chat-log');
-const chatInput = document.getElementById('chat-input');
-const chatSend = document.getElementById('chat-send');
-const chatToggle = document.getElementById('chat-toggle');
-const chatEl = document.getElementById('chat');
-
-function toggleChat() {
-  chatVisible = !chatVisible;
-  chatEl.style.display = chatVisible ? 'flex' : 'none';
-  if (chatVisible) chatInput.focus();
-}
-
-chatToggle.addEventListener('click', toggleChat);
-chatSend.addEventListener('click', sendChatMessage);
-chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); });
-
-function sendChatMessage() {
-  const text = chatInput.value.trim();
-  if (!text || !network) return;
-  network.sendChat(text);
-  addChatMessage('Я', text, '#00ff88');
-  chatInput.value = '';
-}
-
-function addChatMessage(name, text, color = '#00f3ff') {
-  const div = document.createElement('div');
-  div.className = 'msg';
-  div.innerHTML = `<span class="name" style="color:${color}">${name}:</span> <span class="text">${text}</span>`;
-  chatLog.appendChild(div);
-  chatLog.scrollTop = chatLog.scrollHeight;
-}
-
-function addSystemMessage(text) {
-  const div = document.createElement('div');
-  div.className = 'system';
-  div.textContent = '📢 ' + text;
-  chatLog.appendChild(div);
-  chatLog.scrollTop = chatLog.scrollHeight;
-}
-
-// ============================================================
-// 8. МЕНЮ ВХОДА
-// ============================================================
-const menu = document.getElementById('menu');
-const nameInput = document.getElementById('name-input');
-const btnEnter = document.getElementById('btn-enter');
-
-btnEnter.addEventListener('click', startGame);
-nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') startGame(); });
-
-function startGame() {
-  const name = nameInput.value.trim() || 'Игрок';
-  
-  menu.style.display = 'none';
-  document.getElementById('info').style.display = 'block';
-  document.getElementById('player-count').style.display = 'block';
-  chatToggle.style.display = 'block';
-
-  network = new Network(name);
-  myId = network.getMyId();
-
-  const colors = [0xff4488, 0x44ff88, 0xffaa44, 0x8844ff, 0x44ddff, 0xff66aa];
-  let colorIndex = 0;
-
-  network.on('playerJoin', (id, player) => {
-    if (id === myId) return;
-    const color = colors[colorIndex % colors.length];
-    colorIndex++;
-    addRemotePlayer(id, color, player.name);
-    addSystemMessage(`👤 ${player.name} вошёл в город`);
-    updateCount();
-  });
-
-  network.on('playerMove', (id, player) => {
-    if (id === myId) return;
-    if (remoteMeshesMap[id]) {
-      remoteMeshesMap[id].mesh.position.set(player.x || 0, 0, player.z || 0);
-      if (player.rotation) remoteMeshesMap[id].mesh.rotation.y = player.rotation;
-    }
-  });
-
-  network.on('playerLeave', (id) => {
-    if (remoteMeshesMap[id]) {
-      const name = remoteMeshesMap[id].name || 'Игрок';
-      removeRemotePlayer(id);
-      addSystemMessage(`👤 ${name} покинул город`);
-      updateCount();
-    }
-  });
-
-  network.on('chatMessage', (id, text, name) => {
-    if (id === myId) return;
-    const colorsMap = { 'Хост': '#ff007f' };
-    const color = colorsMap[name] || '#00f3ff';
-    addChatMessage(name || 'Игрок', text, color);
-  });
-
-  addSystemMessage(`✅ Добро пожаловать, ${name}!`);
-  updateCount();
-}
-
-function updateCount() {
-  if (network) {
-    const count = Object.keys(network.getPlayers()).length;
-    document.getElementById('count-display').textContent = count;
-  }
-}
-
-// ============================================================
-// 9. ГЛАВНЫЙ ЦИКЛ
-// ============================================================
-function animate() {
-  requestAnimationFrame(animate);
-
-  if (network) {
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
-    forward.y = 0;
-    forward.normalize();
-
-    const right = new THREE.Vector3();
-    right.crossVectors(forward, camera.up).normalize();
-
-    let moveX = 0, moveZ = 0;
-    if (keys['w'] || keys['arrowup']) moveZ += 1;
-    if (keys['s'] || keys['arrowdown']) moveZ -= 1;
-    if (keys['a'] || keys['arrowleft']) moveX -= 1;
-    if (keys['d'] || keys['arrowright']) moveX += 1;
-
-    let moved = false;
-    let angle = 0;
-
-    if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
-      const len = Math.hypot(moveX, moveZ);
-      moveX /= len;
-      moveZ /= len;
-      const speed = 0.15;
-      const dx = (forward.x * moveZ + right.x * moveX) * speed;
-      const dz = (forward.z * moveZ + right.z * moveX) * speed;
-      
-      if (!checkCollision(camera.position.x + dx, camera.position.z)) {
-        camera.position.x += dx;
-        moved = true;
-      }
-      if (!checkCollision(camera.position.x, camera.position.z + dz)) {
-        camera.position.z += dz;
-        moved = true;
-      }
-      angle = Math.atan2(moveX, moveZ);
-      localPlayerGroup.rotation.y = angle;
-    }
-
-    localPlayerGroup.position.set(camera.position.x, 0, camera.position.z);
-
-    if (keys['space']) camera.position.y += 0.12;
-    if (keys['shift']) camera.position.y = Math.max(1.2, camera.position.y - 0.12);
-
-    if (moved) {
-      network.sendMove(camera.position.x, camera.position.z, camera.position.y, angle);
-    }
-  }
-
-  renderer.render(scene, camera);
-}
-
-animate();
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+  // =============================================
+  // 3. РЕНДЕРЕР
+  // =============================================
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  document.body.prepend(renderer.domElement);
 
-console.log('🏙️ Angelos City — общий мир!');
+  // =============================================
+  // 4. УПРАВЛЕНИЕ (OrbitControls)
+  // =============================================
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.minDistance = 2;
+  controls.maxDistance = 20;
+  controls.target.set(0, 1, 0);
+
+  // =============================================
+  // 5. СВЕТ
+  // =============================================
+  // Ambient
+  const ambient = new THREE.AmbientLight(0x222244, 0.5);
+  scene.add(ambient);
+
+  // Основной свет
+  const dirLight = new THREE.DirectionalLight(0x88ccff, 1.5);
+  dirLight.position.set(10, 20, 10);
+  dirLight.castShadow = true;
+  scene.add(dirLight);
+
+  // Дополнительный свет сзади
+  const backLight = new THREE.DirectionalLight(0xff4488, 0.5);
+  backLight.position.set(-5, 5, -10);
+  scene.add(backLight);
+
+  // Неоновый свет снизу
+  const bottomLight = new THREE.PointLight(0x00f3ff, 1, 20);
+  bottomLight.position.set(0, -2, 0);
+  scene.add(bottomLight);
+
+  // =============================================
+  // 6. ПОЛ
+  // =============================================
+  const gridHelper = new THREE.GridHelper(20, 20, 0x00f3ff, 0x334466);
+  gridHelper.position.y = -0.5;
+  scene.add(gridHelper);
+
+  // Полупрозрачная плоскость
+  const planeGeo = new THREE.PlaneGeometry(30, 30);
+  const planeMat = new THREE.MeshPhongMaterial({
+    color: 0x0a0a1a,
+    transparent: true,
+    opacity: 0.5,
+    side: THREE.DoubleSide
+  });
+  const plane = new THREE.Mesh(planeGeo, planeMat);
+  plane.rotation.x = -Math.PI / 2;
+  plane.position.y = -0.5;
+  plane.receiveShadow = true;
+  scene.add(plane);
+
+  // =============================================
+  // 7. ЗАГРУЗКА КОРАБЛЯ (.glb)
+  // =============================================
+  const loader = new THREE.GLTFLoader();
+  const loadingEl = document.getElementById('loading');
+
+  // Путь к твоему файлу (положи в папку models/)
+  const modelPath = 'models/karablik_Untitled.glb';
+
+  loader.load(
+    modelPath,
+    (gltf) => {
+      const model = gltf.scene;
+      
+      // Центрируем модель
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center);
+      model.position.y += 0.5;
+      
+      // Масштабируем если нужно
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      if (maxDim > 5) {
+        const scale = 5 / maxDim;
+        model.scale.set(scale, scale, scale);
+      }
+
+      // Включаем тени
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          // Добавляем красивый материал
+          if (child.material) {
+            child.material.metalness = 0.6;
+            child.material.roughness = 0.3;
+          }
+        }
+      });
+
+      scene.add(model);
+      loadingEl.style.display = 'none';
+      console.log('✅ Корабль загружен!');
+    },
+    (xhr) => {
+      const progress = Math.round((xhr.loaded / xhr.total) * 100);
+      loadingEl.textContent = `⏳ Загрузка: ${progress}%`;
+    },
+    (error) => {
+      console.error('❌ Ошибка загрузки:', error);
+      loadingEl.textContent = '❌ Не удалось загрузить корабль';
+      loadingEl.style.color = '#ff3366';
+    }
+  );
+
+  // =============================================
+  // 8. АНИМАЦИЯ
+  // =============================================
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+
+    // Плавный поворот корабля (если нужно)
+    // scene.children.forEach(child => {
+    //   if (child.isGroup) child.rotation.y += 0.002;
+    // });
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  // =============================================
+  // 9. RESIZE
+  // =============================================
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 </script>
 </body>
 </html>
