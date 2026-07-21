@@ -1,28 +1,6 @@
 // ============================================================
-// ВСЯ ИГРОВАЯ ЛОГИКА THREE.JS + МОБИЛЬНОЕ УПРАВЛЕНИЕ
+// ВЕРТИКАЛЬНАЯ МОБИЛЬНАЯ ВЕРСИЯ (БЕЗ ПОВОРОТА ЭКРАНА)
 // ============================================================
-
-// ============================================================
-// 0. ПРОВЕРКА ОРИЕНТАЦИИ (ГОРИЗОНТАЛЬНАЯ)
-// ============================================================
-const rotateHint = document.getElementById('rotate-hint');
-const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-if (isMobile) {
-  function checkOrientation() {
-    if (window.innerHeight > window.innerWidth) {
-      rotateHint.style.display = 'block';
-      document.getElementById('info').style.display = 'none';
-      document.getElementById('controls').style.display = 'none';
-    } else {
-      rotateHint.style.display = 'none';
-      document.getElementById('info').style.display = 'block';
-      document.getElementById('controls').style.display = 'block';
-    }
-  }
-  checkOrientation();
-  window.addEventListener('resize', checkOrientation);
-}
 
 // ============================================================
 // 1. ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
@@ -231,124 +209,143 @@ document.addEventListener('mousemove', (e) => {
 });
 
 // ============================================================
-// 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ (ПОЛНОСТЬЮ ПЕРЕРАБОТАНО)
+// 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ (ВЕРТИКАЛЬНОЕ)
 // ============================================================
-const joystickArea = document.getElementById('joystick-area');
-const joystickKnob = document.getElementById('joystick-knob');
-const cameraArea = document.getElementById('camera-area');
-const jumpBtn = document.getElementById('jump-btn');
+// Зоны экрана:
+// - Центральная зона (весь экран, кроме правого края) — движение и поворот
+// - Правая зона (20% ширины) — камера вверх/вниз
+// - Кнопка прыжка — справа внизу
 
-let touchMove = { x: 0, y: 0 };
-let touchCamera = { x: 0, y: 0 };
-let joystickId = null;
-let cameraTouchId = null;
+const moveZone = document.createElement('div');
+moveZone.style.cssText = 'position:absolute;top:0;left:0;width:80%;height:100%;z-index:40;touch-action:none;';
+document.body.appendChild(moveZone);
+
+const lookZone = document.createElement('div');
+lookZone.style.cssText = 'position:absolute;top:0;right:0;width:20%;height:100%;z-index:40;touch-action:none;';
+document.body.appendChild(lookZone);
+
+// Убираем старые элементы управления, чтобы не мешали
+const oldJoystick = document.getElementById('joystick-area');
+const oldCamera = document.getElementById('camera-area');
+if (oldJoystick) oldJoystick.style.display = 'none';
+if (oldCamera) oldCamera.style.display = 'none';
+
+let touchMoveId = null;
+let touchLookId = null;
+let lastMovePos = { x: 0, y: 0 };
+let lastLookPos = { x: 0, y: 0 };
+let moveDelta = { x: 0, y: 0 };
+let lookDelta = { x: 0, y: 0 };
 let jumpPressed = false;
 
-// --- ДЖОЙСТИК (левый палец) ---
-joystickArea.addEventListener('touchstart', (e) => {
+// --- ЦЕНТРАЛЬНАЯ ЗОНА (ДВИЖЕНИЕ + ПОВОРОТ) ---
+moveZone.addEventListener('touchstart', (e) => {
   e.preventDefault();
   const touch = e.changedTouches[0];
-  joystickId = touch.identifier;
-  updateJoystick(touch);
+  touchMoveId = touch.identifier;
+  lastMovePos = { x: touch.clientX, y: touch.clientY };
+  moveDelta = { x: 0, y: 0 };
 });
 
-joystickArea.addEventListener('touchmove', (e) => {
+moveZone.addEventListener('touchmove', (e) => {
   e.preventDefault();
   for (const touch of e.changedTouches) {
-    if (touch.identifier === joystickId) updateJoystick(touch);
-  }
-});
-
-joystickArea.addEventListener('touchend', (e) => {
-  for (const touch of e.changedTouches) {
-    if (touch.identifier === joystickId) {
-      joystickId = null;
-      touchMove.x = 0;
-      touchMove.y = 0;
-      joystickKnob.style.transform = 'translate(-50%, -50%)';
-      joystickKnob.style.background = 'rgba(0, 243, 255, 0.5)';
+    if (touch.identifier === touchMoveId) {
+      const dx = touch.clientX - lastMovePos.x;
+      const dy = touch.clientY - lastMovePos.y;
+      moveDelta.x = dx;
+      moveDelta.y = dy;
+      lastMovePos = { x: touch.clientX, y: touch.clientY };
     }
   }
 });
 
-joystickArea.addEventListener('touchcancel', () => {
-  joystickId = null;
-  touchMove.x = 0;
-  touchMove.y = 0;
-  joystickKnob.style.transform = 'translate(-50%, -50%)';
-  joystickKnob.style.background = 'rgba(0, 243, 255, 0.5)';
+moveZone.addEventListener('touchend', (e) => {
+  for (const touch of e.changedTouches) {
+    if (touch.identifier === touchMoveId) {
+      touchMoveId = null;
+      moveDelta = { x: 0, y: 0 };
+    }
+  }
 });
 
-function updateJoystick(touch) {
-  const rect = joystickArea.getBoundingClientRect();
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const dx = touch.clientX - cx;
-  const dy = touch.clientY - cy;
-  const dist = Math.hypot(dx, dy);
-  const maxDist = rect.width / 2 - 20;
-  const clamped = Math.min(dist, maxDist);
-  const angle = Math.atan2(dy, dx);
-  const normX = (Math.cos(angle) * clamped) / maxDist;
-  const normY = (Math.sin(angle) * clamped) / maxDist;
-  touchMove.x = normX;
-  touchMove.y = -normY;
-  const knobX = Math.cos(angle) * clamped;
-  const knobY = Math.sin(angle) * clamped;
-  joystickKnob.style.transform = `translate(${-50 + (knobX / rect.width) * 100}%, ${-50 + (knobY / rect.height) * 100}%)`;
-  joystickKnob.style.background = `rgba(0, 243, 255, ${0.3 + 0.7 * (clamped / maxDist)})`;
+moveZone.addEventListener('touchcancel', () => {
+  touchMoveId = null;
+  moveDelta = { x: 0, y: 0 };
+});
+
+// --- ПРАВАЯ ЗОНА (КАМЕРА ВВЕРХ/ВНИЗ) ---
+lookZone.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  touchLookId = touch.identifier;
+  lastLookPos = { x: touch.clientX, y: touch.clientY };
+  lookDelta = { x: 0, y: 0 };
+});
+
+lookZone.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    if (touch.identifier === touchLookId) {
+      const dy = touch.clientY - lastLookPos.y;
+      lookDelta.y = dy;
+      lastLookPos = { x: touch.clientX, y: touch.clientY };
+    }
+  }
+});
+
+lookZone.addEventListener('touchend', (e) => {
+  for (const touch of e.changedTouches) {
+    if (touch.identifier === touchLookId) {
+      touchLookId = null;
+      lookDelta = { x: 0, y: 0 };
+    }
+  }
+});
+
+lookZone.addEventListener('touchcancel', () => {
+  touchLookId = null;
+  lookDelta = { x: 0, y: 0 };
+});
+
+// --- КНОПКА ПРЫЖКА (СПРАВА ВНИЗУ) ---
+const jumpBtn = document.getElementById('jump-btn');
+if (jumpBtn) {
+  jumpBtn.style.display = 'flex';
+  jumpBtn.style.width = '70px';
+  jumpBtn.style.height = '70px';
+  jumpBtn.style.bottom = '30px';
+  jumpBtn.style.right = '30px';
+  jumpBtn.style.borderRadius = '50%';
+  jumpBtn.style.background = 'rgba(255, 0, 127, 0.25)';
+  jumpBtn.style.border = '2px solid rgba(255, 0, 127, 0.5)';
+  jumpBtn.style.color = '#ff007f';
+  jumpBtn.style.fontSize = '24px';
+  jumpBtn.style.zIndex = '50';
+  jumpBtn.style.justifyContent = 'center';
+  jumpBtn.style.alignItems = 'center';
+  jumpBtn.style.touchAction = 'none';
+  jumpBtn.style.userSelect = 'none';
+  jumpBtn.style.fontFamily = 'monospace';
+
+  jumpBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    jumpPressed = true;
+    jumpBtn.style.transform = 'scale(0.92)';
+    jumpBtn.style.background = 'rgba(255, 0, 127, 0.4)';
+  });
+  jumpBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    jumpPressed = false;
+    jumpBtn.style.transform = 'scale(1)';
+    jumpBtn.style.background = 'rgba(255, 0, 127, 0.25)';
+  });
+  jumpBtn.addEventListener('touchcancel', () => {
+    jumpPressed = false;
+    jumpBtn.style.transform = 'scale(1)';
+    jumpBtn.style.background = 'rgba(255, 0, 127, 0.25)';
+  });
 }
-
-// --- КАМЕРА (правый палец) ---
-cameraArea.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const touch = e.changedTouches[0];
-  cameraTouchId = touch.identifier;
-  touchCamera = { x: touch.clientX, y: touch.clientY };
-});
-
-cameraArea.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  for (const touch of e.changedTouches) {
-    if (touch.identifier === cameraTouchId) {
-      const dx = touch.clientX - touchCamera.x;
-      const dy = touch.clientY - touchCamera.y;
-      euler.y -= dx * 0.005;
-      euler.x -= dy * 0.005;
-      euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
-      camera.rotation.order = 'YXZ';
-      camera.rotation.x = euler.x;
-      camera.rotation.y = euler.y;
-      touchCamera = { x: touch.clientX, y: touch.clientY };
-    }
-  }
-});
-
-cameraArea.addEventListener('touchend', (e) => {
-  for (const touch of e.changedTouches) {
-    if (touch.identifier === cameraTouchId) cameraTouchId = null;
-  }
-});
-
-cameraArea.addEventListener('touchcancel', () => {
-  cameraTouchId = null;
-});
-
-// --- ПРЫЖОК ---
-jumpBtn.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  jumpPressed = true;
-  jumpBtn.style.transform = 'scale(0.92)';
-});
-jumpBtn.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  jumpPressed = false;
-  jumpBtn.style.transform = 'scale(1)';
-});
-jumpBtn.addEventListener('touchcancel', () => {
-  jumpPressed = false;
-  jumpBtn.style.transform = 'scale(1)';
-});
 
 // ============================================================
 // 10. ЧАТ
@@ -366,9 +363,11 @@ function toggleChat() {
   if (chatVisible) chatInput.focus();
 }
 
-chatToggle.addEventListener('click', toggleChat);
-chatSend.addEventListener('click', sendChat);
-chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+if (chatToggle) chatToggle.addEventListener('click', toggleChat);
+if (chatSend) chatSend.addEventListener('click', sendChat);
+if (chatInput) {
+  chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+}
 
 function sendChat() {
   const text = chatInput.value.trim();
@@ -489,6 +488,24 @@ let lastSentTime = 0;
 function animate() {
   requestAnimationFrame(animate);
 
+  // ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ =====
+  // Центральная зона: свайп вверх/вниз → движение вперёд/назад
+  // Свайп вправо/влево → поворот персонажа
+  const moveForward = -moveDelta.y * 0.02; // вверх → вперёд
+  const moveTurn = moveDelta.x * 0.02; // вправо → поворот вправо
+
+  // Правая зона: свайп вверх/вниз → камера вверх/вниз
+  const lookUp = lookDelta.y * 0.02; // вверх → камера вверх
+
+  // ===== ОБНОВЛЯЕМ КАМЕРУ (поворот + взгляд вверх/вниз) =====
+  euler.y += moveTurn;
+  euler.x += lookUp;
+  euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
+  camera.rotation.order = 'YXZ';
+  camera.rotation.x = euler.x;
+  camera.rotation.y = euler.y;
+
+  // ===== ДВИЖЕНИЕ ВПЕРЁД/НАЗАД =====
   const forward = new THREE.Vector3(0, 0, -1);
   forward.applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -505,9 +522,10 @@ function animate() {
   if (keys['a'] || keys['arrowleft']) moveX -= 1;
   if (keys['d'] || keys['arrowright']) moveX += 1;
   
-  // Джойстик
-  moveX += touchMove.x;
-  moveZ += touchMove.y;
+  // Мобильный свайп (вперёд/назад)
+  if (Math.abs(moveForward) > 0.05) {
+    moveZ += moveForward;
+  }
 
   let moved = false;
   let angle = 0;
@@ -527,6 +545,7 @@ function animate() {
     playerGroup.rotation.y = angle;
   }
 
+  // Прыжок (клавиатура или мобильная кнопка)
   let jump = keys['space'] || keys['Space'] || jumpPressed;
   if (jump && isGrounded) {
     velocityY = 0.2;
@@ -576,7 +595,6 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  if (isMobile) checkOrientation();
 });
 
 console.log('🚢 Angelos City загружен!');
