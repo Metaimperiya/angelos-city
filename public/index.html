@@ -2,11 +2,11 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>🚢 Angelos City</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { overflow: hidden; background: #020208; }
+    * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+    body { overflow: hidden; background: #020208; font-family: monospace; }
     #loading {
       position: absolute;
       top: 50%;
@@ -14,7 +14,6 @@
       transform: translate(-50%, -50%);
       color: #00f3ff;
       font-size: 20px;
-      font-family: monospace;
       z-index: 50;
       text-shadow: 0 0 30px #00f3ff;
       animation: blink 1s infinite alternate;
@@ -30,63 +29,129 @@
       transform: translateX(-50%);
       color: #00f0ff;
       background: rgba(0,0,0,0.7);
-      padding: 8px 20px;
+      padding: 6px 16px;
       border-radius: 10px;
-      font-family: monospace;
-      font-size: 12px;
+      font-size: 11px;
       z-index: 100;
       border: 1px solid #00f0ff;
       text-align: center;
       pointer-events: none;
+      white-space: nowrap;
     }
     #controls {
       position: absolute;
-      top: 20px;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       color: #ff007f;
       background: rgba(0,0,0,0.7);
-      padding: 6px 16px;
+      padding: 4px 12px;
       border-radius: 8px;
-      font-family: monospace;
-      font-size: 13px;
+      font-size: 11px;
       z-index: 100;
       border: 1px solid #ff007f;
       text-align: center;
       pointer-events: none;
+      white-space: nowrap;
     }
     #players-count {
       position: absolute;
-      top: 80px;
-      right: 20px;
+      top: 60px;
+      right: 15px;
       color: #00ff88;
       background: rgba(0,0,0,0.7);
-      padding: 6px 14px;
+      padding: 4px 12px;
       border-radius: 8px;
-      font-family: monospace;
-      font-size: 13px;
+      font-size: 12px;
       z-index: 100;
       border: 1px solid #00ff88;
       pointer-events: none;
     }
+
+    /* ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ ===== */
+    #joystick-area {
+      position: absolute;
+      bottom: 30px;
+      left: 30px;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background: rgba(0, 243, 255, 0.15);
+      border: 2px solid rgba(0, 243, 255, 0.3);
+      z-index: 50;
+      touch-action: none;
+      display: none;
+    }
+    #joystick-knob {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(0, 243, 255, 0.5);
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+      pointer-events: none;
+    }
+
+    #camera-area {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 50%;
+      height: 100%;
+      z-index: 45;
+      touch-action: none;
+      display: none;
+    }
+
+    #jump-btn {
+      position: absolute;
+      bottom: 40px;
+      right: 30px;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(255, 0, 127, 0.25);
+      border: 2px solid rgba(255, 0, 127, 0.5);
+      color: #ff007f;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 50;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      touch-action: none;
+      user-select: none;
+      font-family: monospace;
+      box-shadow: 0 0 30px rgba(255, 0, 127, 0.1);
+    }
+    #jump-btn:active {
+      background: rgba(255, 0, 127, 0.4);
+      transform: scale(0.92);
+    }
+
+    /* ===== ЧАТ ===== */
     #chat {
       position: absolute;
       bottom: 80px;
-      left: 20px;
-      width: 300px;
-      max-height: 200px;
+      left: 10px;
+      width: calc(100% - 20px);
+      max-width: 320px;
+      max-height: 180px;
       z-index: 100;
       display: none;
       flex-direction: column;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       border: 1px solid #00f3ff;
       border-radius: 12px;
-      padding: 10px;
+      padding: 8px;
     }
     #chat-log {
       flex: 1;
       overflow-y: auto;
-      max-height: 140px;
+      max-height: 120px;
       color: #aabbdd;
       font-size: 12px;
       line-height: 1.5;
@@ -101,30 +166,31 @@
       background: transparent;
       border: 1px solid #334466;
       color: #fff;
-      padding: 4px 10px;
+      padding: 6px 10px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 14px;
       outline: none;
       font-family: monospace;
+      min-height: 36px;
     }
     #chat-input:focus { border-color: #00f3ff; }
     #chat-send {
       background: transparent;
       border: 1px solid #00f3ff;
       color: #00f3ff;
-      padding: 4px 14px;
+      padding: 6px 14px;
       border-radius: 6px;
       cursor: pointer;
       font-family: monospace;
-      font-size: 12px;
+      font-size: 14px;
     }
     #chat-send:hover { background: #00f3ff; color: #000; }
     #chat-toggle {
       position: absolute;
-      bottom: 20px;
-      left: 20px;
+      bottom: 10px;
+      left: 10px;
       z-index: 99;
-      background: transparent;
+      background: rgba(0,0,0,0.7);
       border: 1px solid #00f3ff;
       color: #00f3ff;
       padding: 6px 14px;
@@ -135,14 +201,66 @@
       display: none;
     }
     #chat-toggle:hover { background: #00f3ff; color: #000; }
+
+    /* ===== АДАПТАЦИЯ ПОД ТЕЛЕФОН ===== */
+    @media (max-width: 768px) {
+      #joystick-area { display: block; width: 120px; height: 120px; bottom: 20px; left: 20px; }
+      #joystick-knob { width: 45px; height: 45px; }
+      #camera-area { display: block; }
+      #jump-btn { display: flex; width: 65px; height: 65px; bottom: 25px; right: 20px; font-size: 18px; }
+      #controls { font-size: 10px; top: 8px; padding: 3px 10px; }
+      #info { font-size: 10px; bottom: 80px; padding: 4px 12px; white-space: normal; }
+      #players-count { top: 50px; right: 10px; font-size: 11px; padding: 3px 10px; }
+    }
+    @media (pointer: coarse) {
+      #joystick-area { display: block; }
+      #camera-area { display: block; }
+      #jump-btn { display: flex; }
+    }
+
+    /* ПОДСКАЗКА ПОВЕРНУТЬ ТЕЛЕФОН */
+    #rotate-hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #00f3ff;
+      font-size: 24px;
+      z-index: 300;
+      background: rgba(0,0,0,0.9);
+      padding: 30px 40px;
+      border-radius: 20px;
+      border: 2px solid #00f3ff;
+      text-align: center;
+      display: none;
+      font-family: monospace;
+      text-shadow: 0 0 30px #00f3ff;
+    }
+    #rotate-hint span {
+      font-size: 60px;
+      display: block;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
+
+<div id="rotate-hint">
+  <span>📱</span>
+  Поверни телефон<br>в горизонтальный режим
+</div>
 
 <div id="loading">⏳ Подключение к серверу...</div>
 <div id="controls">🎮 WASD — ходьба | Пробел — прыжок | Мышь — обзор</div>
 <div id="info">🖱️ Нажми на экран, чтобы захватить мышь</div>
 <div id="players-count">👥 <span id="count-display">1</span></div>
+
+<!-- МОБИЛЬНОЕ УПРАВЛЕНИЕ -->
+<div id="joystick-area">
+  <div id="joystick-knob"></div>
+</div>
+<div id="camera-area"></div>
+<div id="jump-btn">⬆</div>
 
 <div id="chat">
   <div id="chat-log"></div>
@@ -158,7 +276,29 @@
 
 <script>
   // ============================================================
-  // 0. ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
+  // 0. ПРОВЕРКА ОРИЕНТАЦИИ (ГОРИЗОНТАЛЬНАЯ)
+  // ============================================================
+  const rotateHint = document.getElementById('rotate-hint');
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    function checkOrientation() {
+      if (window.innerHeight > window.innerWidth) {
+        rotateHint.style.display = 'block';
+        document.getElementById('info').style.display = 'none';
+        document.getElementById('controls').style.display = 'none';
+      } else {
+        rotateHint.style.display = 'none';
+        document.getElementById('info').style.display = 'block';
+        document.getElementById('controls').style.display = 'block';
+      }
+    }
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+  }
+
+  // ============================================================
+  // 1. ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
   // ============================================================
   const socket = new WebSocket(`wss://${window.location.host}`);
   let myId = '';
@@ -168,7 +308,7 @@
   let playerName = 'Игрок_' + Math.random().toString(36).substr(2, 4);
 
   // ============================================================
-  // 1. СЦЕНА
+  // 2. СЦЕНА
   // ============================================================
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0a1a);
@@ -188,7 +328,7 @@
   document.body.prepend(renderer.domElement);
 
   // ============================================================
-  // 2. СВЕТ
+  // 3. СВЕТ
   // ============================================================
   const ambient = new THREE.AmbientLight(0x222244, 0.6);
   scene.add(ambient);
@@ -207,7 +347,7 @@
   scene.add(bottomLight);
 
   // ============================================================
-  // 3. ПОЛ
+  // 4. ПОЛ
   // ============================================================
   const gridHelper = new THREE.GridHelper(100, 40, 0x00f3ff, 0x334466);
   gridHelper.position.y = -0.5;
@@ -227,7 +367,7 @@
   scene.add(plane);
 
   // ============================================================
-  // 4. ПЕРСОНАЖ
+  // 5. ПЕРСОНАЖ
   // ============================================================
   const playerGroup = new THREE.Group();
   scene.add(playerGroup);
@@ -262,7 +402,7 @@
   const playerPos = { x: 0, z: 0, y: 0 };
 
   // ============================================================
-  // 5. УДАЛЁННЫЕ ИГРОКИ
+  // 6. УДАЛЁННЫЕ ИГРОКИ
   // ============================================================
   function addRemotePlayer(id, x, z, color) {
     if (remoteMeshes[id]) return;
@@ -281,7 +421,7 @@
   }
 
   // ============================================================
-  // 6. ЗАГРУЗКА КОРАБЛЯ
+  // 7. ЗАГРУЗКА КОРАБЛЯ (ПРЯМО С РЕНДЕРА)
   // ============================================================
   const loader = new THREE.GLTFLoader();
   const loadingEl = document.getElementById('loading');
@@ -310,23 +450,25 @@
           }
         }
       });
-      ship.position.set(4, 0, 4);
+      ship.position.set(5, 0, 5);
       scene.add(ship);
       console.log('✅ Корабль загружен!');
+      loadingEl.textContent = '✅ Корабль загружен!';
+      setTimeout(() => { if (loadingEl.textContent.includes('Корабль')) loadingEl.style.display = 'none'; }, 1500);
     },
     (xhr) => {
       const progress = Math.round((xhr.loaded / xhr.total) * 100);
-      if (loadingEl.textContent.includes('Загрузка корабля')) {
-        loadingEl.textContent = `⏳ Загрузка корабля: ${progress}%`;
-      }
+      loadingEl.textContent = `⏳ Корабль: ${progress}%`;
     },
     (error) => {
       console.error('❌ Ошибка загрузки корабля:', error);
+      loadingEl.textContent = '⚠️ Корабль не загружен, но игра работает';
+      setTimeout(() => { loadingEl.style.display = 'none'; }, 3000);
     }
   );
 
   // ============================================================
-  // 7. УПРАВЛЕНИЕ
+  // 8. УПРАВЛЕНИЕ (КЛАВИАТУРА + МЫШЬ)
   // ============================================================
   const keys = {};
   window.addEventListener('keydown', (e) => {
@@ -362,7 +504,127 @@
   });
 
   // ============================================================
-  // 8. ЧАТ
+  // 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ
+  // ============================================================
+  const joystickArea = document.getElementById('joystick-area');
+  const joystickKnob = document.getElementById('joystick-knob');
+  const cameraArea = document.getElementById('camera-area');
+  const jumpBtn = document.getElementById('jump-btn');
+
+  let touchMove = { x: 0, y: 0 };
+  let touchCamera = { x: 0, y: 0 };
+  let joystickId = null;
+  let cameraTouchId = null;
+  let jumpPressed = false;
+
+  // --- ДЖОЙСТИК (левый палец) ---
+  joystickArea.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    joystickId = touch.identifier;
+    updateJoystick(touch);
+  });
+
+  joystickArea.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joystickId) updateJoystick(touch);
+    }
+  });
+
+  joystickArea.addEventListener('touchend', (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joystickId) {
+        joystickId = null;
+        touchMove.x = 0;
+        touchMove.y = 0;
+        joystickKnob.style.transform = 'translate(-50%, -50%)';
+        joystickKnob.style.background = 'rgba(0, 243, 255, 0.5)';
+      }
+    }
+  });
+
+  joystickArea.addEventListener('touchcancel', () => {
+    joystickId = null;
+    touchMove.x = 0;
+    touchMove.y = 0;
+    joystickKnob.style.transform = 'translate(-50%, -50%)';
+    joystickKnob.style.background = 'rgba(0, 243, 255, 0.5)';
+  });
+
+  function updateJoystick(touch) {
+    const rect = joystickArea.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = touch.clientX - cx;
+    const dy = touch.clientY - cy;
+    const dist = Math.hypot(dx, dy);
+    const maxDist = rect.width / 2 - 20;
+    const clamped = Math.min(dist, maxDist);
+    const angle = Math.atan2(dy, dx);
+    const normX = (Math.cos(angle) * clamped) / maxDist;
+    const normY = (Math.sin(angle) * clamped) / maxDist;
+    touchMove.x = normX;
+    touchMove.y = -normY;
+    const knobX = Math.cos(angle) * clamped;
+    const knobY = Math.sin(angle) * clamped;
+    joystickKnob.style.transform = `translate(${-50 + (knobX / rect.width) * 100}%, ${-50 + (knobY / rect.height) * 100}%)`;
+    joystickKnob.style.background = `rgba(0, 243, 255, ${0.3 + 0.7 * (clamped / maxDist)})`;
+  }
+
+  // --- КАМЕРА (правый палец) ---
+  cameraArea.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    cameraTouchId = touch.identifier;
+    touchCamera = { x: touch.clientX, y: touch.clientY };
+  });
+
+  cameraArea.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === cameraTouchId) {
+        const dx = touch.clientX - touchCamera.x;
+        const dy = touch.clientY - touchCamera.y;
+        euler.y -= dx * 0.005;
+        euler.x -= dy * 0.005;
+        euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
+        camera.rotation.order = 'YXZ';
+        camera.rotation.x = euler.x;
+        camera.rotation.y = euler.y;
+        touchCamera = { x: touch.clientX, y: touch.clientY };
+      }
+    }
+  });
+
+  cameraArea.addEventListener('touchend', (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === cameraTouchId) cameraTouchId = null;
+    }
+  });
+
+  cameraArea.addEventListener('touchcancel', () => {
+    cameraTouchId = null;
+  });
+
+  // --- ПРЫЖОК ---
+  jumpBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    jumpPressed = true;
+    jumpBtn.style.transform = 'scale(0.92)';
+  });
+  jumpBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    jumpPressed = false;
+    jumpBtn.style.transform = 'scale(1)';
+  });
+  jumpBtn.addEventListener('touchcancel', () => {
+    jumpPressed = false;
+    jumpBtn.style.transform = 'scale(1)';
+  });
+
+  // ============================================================
+  // 10. ЧАТ
   // ============================================================
   let chatVisible = false;
   const chatLog = document.getElementById('chat-log');
@@ -413,7 +675,7 @@
   }
 
   // ============================================================
-  // 9. СОКЕТ СОБЫТИЯ
+  // 11. СОКЕТ
   // ============================================================
   socket.onopen = () => {
     isConnected = true;
@@ -425,6 +687,7 @@
       x: playerPos.x,
       z: playerPos.z
     }));
+    setTimeout(() => { loadingEl.style.display = 'none'; }, 2000);
   };
 
   socket.onmessage = (event) => {
@@ -441,7 +704,6 @@
           }
         }
         updateCount();
-        loadingEl.style.display = 'none';
         chatToggle.style.display = 'block';
         addSystemMessage('✅ Добро пожаловать в мир!');
         console.log('👥 Игроков в мире:', Object.keys(data.players).length);
@@ -490,7 +752,7 @@
   };
 
   // ============================================================
-  // 10. АНИМАЦИЯ
+  // 12. АНИМАЦИЯ
   // ============================================================
   const speed = 0.15;
   let velocityY = 0;
@@ -509,10 +771,16 @@
     right.crossVectors(forward, camera.up).normalize();
 
     let moveX = 0, moveZ = 0;
+    
+    // Клавиатура
     if (keys['w'] || keys['arrowup']) moveZ += 1;
     if (keys['s'] || keys['arrowdown']) moveZ -= 1;
     if (keys['a'] || keys['arrowleft']) moveX -= 1;
     if (keys['d'] || keys['arrowright']) moveX += 1;
+    
+    // Джойстик
+    moveX += touchMove.x;
+    moveZ += touchMove.y;
 
     let moved = false;
     let angle = 0;
@@ -532,7 +800,8 @@
       playerGroup.rotation.y = angle;
     }
 
-    if ((keys['space'] || keys['Space']) && isGrounded) {
+    let jump = keys['space'] || keys['Space'] || jumpPressed;
+    if (jump && isGrounded) {
       velocityY = 0.2;
       isGrounded = false;
     }
@@ -574,12 +843,13 @@
   animate();
 
   // ============================================================
-  // 11. RESIZE
+  // 13. RESIZE
   // ============================================================
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    if (isMobile) checkOrientation();
   });
 
   console.log('🚢 Angelos City загружен!');
