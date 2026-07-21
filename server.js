@@ -192,7 +192,6 @@
     }
     #chat-toggle:hover { background: #00f3ff; color: #000; }
 
-    /* ===== АДАПТАЦИЯ ПОД ЭКРАН ===== */
     @media (max-width: 768px) {
       #joystick-area { display: block; width: 110px; height: 110px; bottom: 20px; left: 20px; }
       #joystick-knob { width: 40px; height: 40px; }
@@ -205,6 +204,36 @@
       #joystick-area { display: block; }
       #jump-btn { display: flex; }
     }
+
+    /* ===== ДЛЯ ФРЕЙМА ===== */
+    #frame-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 200;
+      background: transparent;
+      display: none;
+      cursor: pointer;
+    }
+    #frame-hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #00f3ff;
+      font-size: 18px;
+      font-family: monospace;
+      text-shadow: 0 0 30px #00f3ff;
+      z-index: 201;
+      display: none;
+      background: rgba(0,0,0,0.7);
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: 1px solid #00f3ff;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -213,6 +242,10 @@
 <div id="controls">🎮 WASD — ходьба | Пробел — прыжок | Мышь — обзор</div>
 <div id="info">🖱️ Нажми на экран, чтобы захватить мышь</div>
 <div id="players-count">👥 <span id="count-display">1</span></div>
+
+<!-- ФРЕЙМ-ОВЕРЛЕЙ (для захвата мыши во фрейме) -->
+<div id="frame-overlay"></div>
+<div id="frame-hint">🖱️ Нажми чтобы управлять</div>
 
 <!-- МОБИЛЬНОЕ УПРАВЛЕНИЕ -->
 <div id="joystick-area">
@@ -234,7 +267,20 @@
 
 <script>
   // ============================================================
-  // 0. ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
+  // 0. ОПРЕДЕЛЕНИЕ ФРЕЙМА
+  // ============================================================
+  const isInFrame = window !== window.top;
+  const frameOverlay = document.getElementById('frame-overlay');
+  const frameHint = document.getElementById('frame-hint');
+
+  if (isInFrame) {
+    frameOverlay.style.display = 'block';
+    frameHint.style.display = 'block';
+    document.getElementById('info').textContent = '🖱️ Нажми на экран, чтобы управлять';
+  }
+
+  // ============================================================
+  // 1. ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
   // ============================================================
   const socket = new WebSocket(`wss://${window.location.host}`);
   let myId = '';
@@ -244,7 +290,7 @@
   let playerName = 'Игрок_' + Math.random().toString(36).substr(2, 4);
 
   // ============================================================
-  // 1. СЦЕНА
+  // 2. СЦЕНА
   // ============================================================
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0a1a);
@@ -264,7 +310,7 @@
   document.body.prepend(renderer.domElement);
 
   // ============================================================
-  // 2. СВЕТ
+  // 3. СВЕТ
   // ============================================================
   const ambient = new THREE.AmbientLight(0x222244, 0.6);
   scene.add(ambient);
@@ -283,7 +329,7 @@
   scene.add(bottomLight);
 
   // ============================================================
-  // 3. ПОЛ
+  // 4. ПОЛ
   // ============================================================
   const gridHelper = new THREE.GridHelper(100, 40, 0x00f3ff, 0x334466);
   gridHelper.position.y = -0.5;
@@ -303,7 +349,7 @@
   scene.add(plane);
 
   // ============================================================
-  // 4. ПЕРСОНАЖ
+  // 5. ПЕРСОНАЖ
   // ============================================================
   const playerGroup = new THREE.Group();
   scene.add(playerGroup);
@@ -338,7 +384,7 @@
   const playerPos = { x: 0, z: 0, y: 0 };
 
   // ============================================================
-  // 5. УДАЛЁННЫЕ ИГРОКИ
+  // 6. УДАЛЁННЫЕ ИГРОКИ
   // ============================================================
   function addRemotePlayer(id, x, z, color) {
     if (remoteMeshes[id]) return;
@@ -357,7 +403,7 @@
   }
 
   // ============================================================
-  // 6. ЗАГРУЗКА КОРАБЛЯ
+  // 7. ЗАГРУЗКА КОРАБЛЯ
   // ============================================================
   const loader = new THREE.GLTFLoader();
   const loadingEl = document.getElementById('loading');
@@ -402,7 +448,7 @@
   );
 
   // ============================================================
-  // 7. УПРАВЛЕНИЕ (КЛАВИАТУРА + МЫШЬ)
+  // 8. УПРАВЛЕНИЕ (КЛАВИАТУРА + МЫШЬ)
   // ============================================================
   const keys = {};
   window.addEventListener('keydown', (e) => {
@@ -419,11 +465,25 @@
   });
 
   let isPointerLocked = false;
-  renderer.domElement.addEventListener('click', () => {
+  
+  // Захват мыши через клик (работает и во фрейме)
+  function requestPointerLock() {
     renderer.domElement.requestPointerLock();
-  });
+    if (isInFrame) {
+      frameOverlay.style.display = 'none';
+      frameHint.style.display = 'none';
+    }
+  }
+
+  renderer.domElement.addEventListener('click', requestPointerLock);
+  frameOverlay.addEventListener('click', requestPointerLock);
+
   document.addEventListener('pointerlockchange', () => {
     isPointerLocked = document.pointerLockElement === renderer.domElement;
+    if (!isPointerLocked && isInFrame) {
+      frameOverlay.style.display = 'block';
+      frameHint.style.display = 'block';
+    }
   });
 
   let euler = { x: 0, y: 0 };
@@ -438,7 +498,7 @@
   });
 
   // ============================================================
-  // 8. МОБИЛЬНОЕ УПРАВЛЕНИЕ (ДЖОЙСТИК)
+  // 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ (ДЖОЙСТИК)
   // ============================================================
   const joystickArea = document.getElementById('joystick-area');
   const joystickKnob = document.getElementById('joystick-knob');
@@ -527,7 +587,7 @@
   });
 
   // ============================================================
-  // 9. ЧАТ
+  // 10. ЧАТ
   // ============================================================
   let chatVisible = false;
   const chatLog = document.getElementById('chat-log');
@@ -578,7 +638,7 @@
   }
 
   // ============================================================
-  // 10. СОКЕТ СОБЫТИЯ
+  // 11. СОКЕТ СОБЫТИЯ
   // ============================================================
   socket.onopen = () => {
     isConnected = true;
@@ -655,7 +715,7 @@
   };
 
   // ============================================================
-  // 11. АНИМАЦИЯ
+  // 12. АНИМАЦИЯ
   // ============================================================
   const speed = 0.15;
   let velocityY = 0;
@@ -750,7 +810,7 @@
   animate();
 
   // ============================================================
-  // 12. RESIZE
+  // 13. RESIZE
   // ============================================================
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -759,6 +819,16 @@
   });
 
   console.log('🚢 Angelos City загружен!');
+
+  // ============================================================
+  // 14. СООБЩЕНИЕ РОДИТЕЛЬСКОМУ ФРЕЙМУ
+  // ============================================================
+  if (isInFrame) {
+    window.parent.postMessage({
+      type: 'angelos-city-ready',
+      url: window.location.href
+    }, '*');
+  }
 </script>
 </body>
 </html>
