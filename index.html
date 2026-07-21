@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🚢 Корабль + Прогулка</title>
+  <title>🚢 Корабль + Прогулка (исправлено)</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { overflow: hidden; background: #020208; }
@@ -75,7 +75,7 @@
   scene.fog = new THREE.FogExp2(0x0a0a1a, 0.008);
 
   // ============================================================
-  // 2. КАМЕРА (от третьего лица)
+  // 2. КАМЕРА
   // ============================================================
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
   camera.position.set(0, 3, 8);
@@ -133,24 +133,7 @@
   scene.add(plane);
 
   // ============================================================
-  // 6. МАЯКИ ДЛЯ ОРИЕНТАЦИИ
-  // ============================================================
-  const colors = [0xff0044, 0x0044ff, 0x00ff44, 0xffaa00];
-  const positions = [
-    [-15, 2, 0],
-    [15, 2, 0],
-    [0, 2, -30],
-    [0, 2, 30]
-  ];
-  positions.forEach((pos, i) => {
-    const mat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length] });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 5, 0.2), mat);
-    mesh.position.set(pos[0], pos[1], pos[2]);
-    scene.add(mesh);
-  });
-
-  // ============================================================
-  // 7. ПЕРСОНАЖ (игрок)
+  // 6. ПЕРСОНАЖ
   // ============================================================
   const playerGroup = new THREE.Group();
   scene.add(playerGroup);
@@ -181,20 +164,10 @@
     playerGroup.add(pupil);
   }
 
-  // Стрелка над головой
-  const arrowMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const arrow = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.1), arrowMat);
-  arrow.position.set(0, 1.9, 0.35);
-  playerGroup.add(arrow);
-  const arrow2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.3), arrowMat);
-  arrow2.position.set(0, 1.9, 0.35);
-  playerGroup.add(arrow2);
-
-  // Позиция игрока
   const playerPos = { x: 0, z: 0, y: 0 };
 
   // ============================================================
-  // 8. ЗАГРУЗКА КОРАБЛЯ
+  // 7. ЗАГРУЗКА КОРАБЛЯ (ОДИН РАЗ)
   // ============================================================
   const loader = new THREE.GLTFLoader();
   const loadingEl = document.getElementById('loading');
@@ -205,7 +178,7 @@
     (gltf) => {
       ship = gltf.scene;
 
-      // Центрируем корабль
+      // Центрируем
       const box = new THREE.Box3().setFromObject(ship);
       const center = box.getCenter(new THREE.Vector3());
       ship.position.sub(center);
@@ -219,7 +192,7 @@
         ship.scale.set(scale, scale, scale);
       }
 
-      // Тени и материалы
+      // Тени
       ship.traverse((child) => {
         if (child.isMesh) {
           child.castShadow = true;
@@ -232,8 +205,7 @@
       });
 
       // Ставим корабль рядом с игроком
-      ship.position.x = 3;
-      ship.position.z = 3;
+      ship.position.set(4, 0, 4);
       scene.add(ship);
 
       loadingEl.style.display = 'none';
@@ -251,7 +223,7 @@
   );
 
   // ============================================================
-  // 9. УПРАВЛЕНИЕ
+  // 8. УПРАВЛЕНИЕ
   // ============================================================
   const keys = {};
   window.addEventListener('keydown', (e) => {
@@ -263,7 +235,7 @@
     keys[e.code] = false;
   });
 
-  // Мышь для обзора
+  // Мышь
   let isPointerLocked = false;
   renderer.domElement.addEventListener('click', () => {
     renderer.domElement.requestPointerLock();
@@ -271,27 +243,31 @@
   document.addEventListener('pointerlockchange', () => {
     isPointerLocked = document.pointerLockElement === renderer.domElement;
   });
+
+  let euler = { x: 0, y: 0 };
   document.addEventListener('mousemove', (e) => {
     if (!isPointerLocked) return;
-    camera.rotation.y -= e.movementX * 0.002;
-    camera.rotation.x -= e.movementY * 0.002;
-    camera.rotation.x = Math.max(-1.2, Math.min(1.2, camera.rotation.x));
+    euler.y -= e.movementX * 0.002;
+    euler.x -= e.movementY * 0.002;
+    euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
+    camera.rotation.order = 'YXZ';
+    camera.rotation.x = euler.x;
+    camera.rotation.y = euler.y;
   });
 
   // ============================================================
-  // 10. АНИМАЦИЯ
+  // 9. АНИМАЦИЯ
   // ============================================================
   const speed = 0.15;
-  const jumpSpeed = 0.08;
   let velocityY = 0;
   let isGrounded = true;
 
   function animate() {
     requestAnimationFrame(animate);
 
-    // ---- ДВИЖЕНИЕ ИГРОКА ----
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
+    // ---- ДВИЖЕНИЕ ----
+    const forward = new THREE.Vector3(0, 0, -1);
+    forward.applyQuaternion(camera.quaternion);
     forward.y = 0;
     forward.normalize();
 
@@ -315,7 +291,6 @@
       playerPos.x += dx;
       playerPos.z += dz;
 
-      // Поворачиваем персонажа
       const angle = Math.atan2(moveX, moveZ);
       playerGroup.rotation.y = angle;
     }
@@ -326,7 +301,6 @@
       isGrounded = false;
     }
 
-    // Гравитация
     if (!isGrounded) {
       velocityY -= 0.008;
       playerPos.y += velocityY;
@@ -337,15 +311,16 @@
       }
     }
 
-    // Обновляем позицию персонажа
     playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
 
-    // ---- КАМЕРА СЛЕДУЕТ ЗА ИГРОКОМ ----
-    const camOffset = new THREE.Vector3(0, 2.5, 6);
-    camOffset.applyQuaternion(camera.quaternion);
-    camera.position.x = playerPos.x + camOffset.x;
-    camera.position.y = playerPos.y + camOffset.y;
-    camera.position.z = playerPos.z + camOffset.z;
+    // ---- КАМЕРА ----
+    const offset = new THREE.Vector3(0, 2.5, 6);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), euler.y);
+    offset.x += playerPos.x;
+    offset.y += playerPos.y;
+    offset.z += playerPos.z;
+
+    camera.position.lerp(offset, 0.1);
     camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
 
     renderer.render(scene, camera);
@@ -354,7 +329,7 @@
   animate();
 
   // ============================================================
-  // 11. RESIZE
+  // 10. RESIZE
   // ============================================================
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -362,7 +337,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  console.log('🚢 Корабль загружен, гуляй вокруг!');
+  console.log('🚢 Готово! Один корабль, один игрок.');
 </script>
 </body>
 </html>
