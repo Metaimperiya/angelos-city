@@ -7,8 +7,9 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Раздаём статику из папки public
+// ===== РАЗДАЁМ СТАТИКУ =====
 app.use(express.static('public'));
+app.use('/models', express.static('models')); // ← ЭТО НОВАЯ СТРОЧКА!
 
 const players = {};
 
