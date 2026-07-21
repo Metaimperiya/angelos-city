@@ -139,7 +139,7 @@
 </head>
 <body>
 
-<div id="loading">⏳ Подключение к миру...</div>
+<div id="loading">⏳ Подключение к серверу...</div>
 <div id="controls">🎮 WASD — ходьба | Пробел — прыжок | Мышь — обзор</div>
 <div id="info">🖱️ Нажми на экран, чтобы захватить мышь</div>
 <div id="players-count">👥 <span id="count-display">1</span></div>
@@ -156,28 +156,139 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
-<!-- PeerJS для мультиплеера -->
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
 <script>
   // ============================================================
-  // 0. МУЛЬТИПЛЕЕР ЧЕРЕЗ PeerJS
+  // 0. СЕРВЕРНАЯ СИНХРОНИЗАЦИЯ (через бесплатный сигнальный сервер)
   // ============================================================
-  // Все игроки подключаются к одной "комнате" через общий ID
-  const ROOM_ID = 'angelos-city-world';
+  // Используем простой WebSocket сервер
+  // ВНИМАНИЕ: Это демо-версия. Для продакшена нужен свой сервер.
   
-  const peer = new Peer(ROOM_ID + '-' + Math.random().toString(36).substr(2, 6), {
-    debug: 0
-  });
-  
-  let connections = {};
-  let remotePlayers = {};
+  // Используем сервер от Glitch (бесплатный)
+  const SERVER_URL = 'wss://angelos-city-server.glitch.me';
+  let socket = null;
   let myId = '';
+  let isConnected = false;
+  const remotePlayers = {};
+  const remoteMeshes = {};
   let playerName = 'Игрок_' + Math.random().toString(36).substr(2, 4);
-  let isHost = false;
 
   // ============================================================
-  // 1. СЦЕНА
+  // 1. ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
+  // ============================================================
+  function connectToServer() {
+    try {
+      socket = new WebSocket(SERVER_URL);
+      
+      socket.onopen = () => {
+        isConnected = true;
+        console.log('🟢 Подключено к серверу');
+        loadingEl.textContent = '✅ Подключено! Загрузка...';
+        
+        // Отправляем информацию о себе
+        socket.send(JSON.stringify({
+          type: 'join',
+          name: playerName,
+          x: playerPos.x,
+          z: playerPos.z
+        }));
+      };
+      
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleServerData(data);
+        } catch (e) {
+          console.error('Ошибка парсинга:', e);
+        }
+      };
+      
+      socket.onclose = () => {
+        isConnected = false;
+        console.log('🔴 Отключено от сервера');
+        loadingEl.textContent = '❌ Потеря соединения. Переподключение...';
+        setTimeout(connectToServer, 3000);
+      };
+      
+      socket.onerror = (error) => {
+        console.error('Ошибка WebSocket:', error);
+        loadingEl.textContent = '❌ Ошибка соединения. Переподключение...';
+        setTimeout(connectToServer, 3000);
+      };
+      
+    } catch (e) {
+      console.error('Ошибка подключения:', e);
+      setTimeout(connectToServer, 3000);
+    }
+  }
+
+  function handleServerData(data) {
+    if (data.type === 'init') {
+      // Получаем свой ID и список игроков
+      myId = data.myId;
+      
+      // Добавляем всех существующих игроков
+      for (const id in data.players) {
+        if (id !== myId) {
+          const player = data.players[id];
+          addRemotePlayer(id, player.x || 0, player.z || 0, player.color || 0xff4488);
+          remotePlayers[id] = player;
+        }
+      }
+      updateCount();
+      loadingEl.style.display = 'none';
+      chatToggle.style.display = 'block';
+      addSystemMessage('✅ Добро пожаловать в мир!');
+      console.log('👥 Игроков в мире:', Object.keys(data.players).length);
+    }
+    
+    if (data.type === 'playerJoin') {
+      if (data.id === myId) return;
+      const color = data.color || 0xff4488;
+      addRemotePlayer(data.id, data.x || 0, data.z || 0, color);
+      remotePlayers[data.id] = { x: data.x || 0, z: data.z || 0, name: data.name || 'Игрок' };
+      addSystemMessage(`👤 ${data.name || 'Игрок'} вошёл в мир`);
+      updateCount();
+    }
+    
+    if (data.type === 'playerMove') {
+      if (data.id === myId) return;
+      if (remoteMeshes[data.id]) {
+        remoteMeshes[data.id].position.set(data.x || 0, 0, data.z || 0);
+        if (data.rotation !== undefined) {
+          remoteMeshes[data.id].rotation.y = data.rotation;
+        }
+      }
+      if (remotePlayers[data.id]) {
+        remotePlayers[data.id].x = data.x;
+        remotePlayers[data.id].z = data.z;
+      }
+    }
+    
+    if (data.type === 'playerLeave') {
+      if (data.id === myId) return;
+      removeRemotePlayer(data.id);
+      delete remotePlayers[data.id];
+      addSystemMessage(`👤 Игрок покинул мир`);
+      updateCount();
+    }
+    
+    if (data.type === 'chat') {
+      if (data.id === myId) return;
+      addChatMessage(data.name || 'Игрок', data.text, '#ffaa44');
+    }
+  }
+
+  // ============================================================
+  // 2. ОТПРАВКА ДАННЫХ НА СЕРВЕР
+  // ============================================================
+  function sendToServer(data) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(data));
+    }
+  }
+
+  // ============================================================
+  // 3. СЦЕНА
   // ============================================================
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0a1a);
@@ -197,7 +308,7 @@
   document.body.prepend(renderer.domElement);
 
   // ============================================================
-  // 2. СВЕТ
+  // 4. СВЕТ
   // ============================================================
   const ambient = new THREE.AmbientLight(0x222244, 0.6);
   scene.add(ambient);
@@ -216,7 +327,7 @@
   scene.add(bottomLight);
 
   // ============================================================
-  // 3. ПОЛ
+  // 5. ПОЛ
   // ============================================================
   const gridHelper = new THREE.GridHelper(100, 40, 0x00f3ff, 0x334466);
   gridHelper.position.y = -0.5;
@@ -236,7 +347,7 @@
   scene.add(plane);
 
   // ============================================================
-  // 4. ПЕРСОНАЖ (ЛОКАЛЬНЫЙ)
+  // 6. ПЕРСОНАЖ (ЛОКАЛЬНЫЙ)
   // ============================================================
   const playerGroup = new THREE.Group();
   scene.add(playerGroup);
@@ -271,27 +382,26 @@
   const playerPos = { x: 0, z: 0, y: 0 };
 
   // ============================================================
-  // 5. УДАЛЁННЫЕ ИГРОКИ
+  // 7. УДАЛЁННЫЕ ИГРОКИ
   // ============================================================
-  const remotePlayerMeshes = {};
-  const playerColors = [0xff4488, 0xffaa44, 0x8844ff, 0x44ddff, 0xff66aa, 0x44ff88];
-
-  function addRemotePlayer(id, color) {
+  function addRemotePlayer(id, x, z, color) {
+    if (remoteMeshes[id]) return;
     const mesh = createPlayerMesh(color);
+    mesh.position.set(x || 0, 0, z || 0);
     scene.add(mesh);
-    remotePlayerMeshes[id] = mesh;
+    remoteMeshes[id] = mesh;
     return mesh;
   }
 
   function removeRemotePlayer(id) {
-    if (remotePlayerMeshes[id]) {
-      scene.remove(remotePlayerMeshes[id]);
-      delete remotePlayerMeshes[id];
+    if (remoteMeshes[id]) {
+      scene.remove(remoteMeshes[id]);
+      delete remoteMeshes[id];
     }
   }
 
   // ============================================================
-  // 6. ЗАГРУЗКА КОРАБЛЯ
+  // 8. ЗАГРУЗКА КОРАБЛЯ
   // ============================================================
   const loader = new THREE.GLTFLoader();
   const loadingEl = document.getElementById('loading');
@@ -323,23 +433,21 @@
       });
       ship.position.set(4, 0, 4);
       scene.add(ship);
-      loadingEl.textContent = '✅ Корабль загружен!';
-      setTimeout(() => { loadingEl.style.display = 'none'; }, 1000);
       console.log('✅ Корабль загружен!');
     },
     (xhr) => {
       const progress = Math.round((xhr.loaded / xhr.total) * 100);
-      loadingEl.textContent = `⏳ Загрузка корабля: ${progress}%`;
+      if (loadingEl.textContent.includes('Загрузка корабля')) {
+        loadingEl.textContent = `⏳ Загрузка корабля: ${progress}%`;
+      }
     },
     (error) => {
-      console.error('❌ Ошибка:', error);
-      loadingEl.textContent = '❌ Ошибка загрузки';
-      loadingEl.style.color = '#ff3366';
+      console.error('❌ Ошибка загрузки корабля:', error);
     }
   );
 
   // ============================================================
-  // 7. УПРАВЛЕНИЕ
+  // 9. УПРАВЛЕНИЕ
   // ============================================================
   const keys = {};
   window.addEventListener('keydown', (e) => {
@@ -375,7 +483,7 @@
   });
 
   // ============================================================
-  // 8. ЧАТ
+  // 10. ЧАТ
   // ============================================================
   let chatVisible = false;
   const chatLog = document.getElementById('chat-log');
@@ -398,8 +506,7 @@
     const text = chatInput.value.trim();
     if (!text) return;
     addChatMessage('Я', text, '#00ff88');
-    // Отправляем всем
-    broadcast({ type: 'chat', text, name: playerName });
+    sendToServer({ type: 'chat', text, name: playerName });
     chatInput.value = '';
   }
 
@@ -419,127 +526,13 @@
     chatLog.scrollTop = chatLog.scrollHeight;
   }
 
-  // ============================================================
-  // 9. МУЛЬТИПЛЕЕРНАЯ ЛОГИКА
-  // ============================================================
-  function broadcast(data) {
-    for (const id in connections) {
-      try {
-        connections[id].send(data);
-      } catch (e) {}
-    }
-  }
-
-  // Подключаемся к общей комнате
-  peer.on('open', (id) => {
-    myId = id;
-    console.log('🟢 Мой ID:', id);
-    
-    // Пытаемся подключиться к хосту (кто-то с ID комнаты)
-    const hostId = ROOM_ID;
-    const conn = peer.connect(hostId);
-    conn.on('open', () => {
-      console.log('✅ Подключен к хосту');
-      connections[hostId] = conn;
-      isHost = false;
-      // Отправляем свои данные
-      conn.send({
-        type: 'join',
-        id: myId,
-        name: playerName,
-        x: playerPos.x,
-        z: playerPos.z,
-        y: playerPos.y,
-        color: playerColors[Math.floor(Math.random() * playerColors.length)]
-      });
-    });
-    
-    // Если никто не ответил — становимся хостом
-    setTimeout(() => {
-      if (Object.keys(connections).length === 0) {
-        isHost = true;
-        console.log('👑 Я хост!');
-        addSystemMessage('👑 Вы создали мир! Другие игроки могут подключаться.');
-        // Ждём подключений
-      }
-      loadingEl.style.display = 'none';
-      chatToggle.style.display = 'block';
-      updateCount();
-    }, 3000);
-  });
-
-  // Принимаем входящие подключения
-  peer.on('connection', (conn) => {
-    connections[conn.peer] = conn;
-    console.log('🔗 Подключение от:', conn.peer);
-    
-    conn.on('data', (data) => {
-      handleData(data, conn.peer);
-    });
-    
-    conn.on('close', () => {
-      delete connections[conn.peer];
-      removeRemotePlayer(conn.peer);
-      updateCount();
-    });
-  });
-
-  // Обработка данных
-  function handleData(data, fromId) {
-    if (data.type === 'join') {
-      // Новый игрок
-      const color = data.color || playerColors[Object.keys(remotePlayerMeshes).length % playerColors.length];
-      const mesh = addRemotePlayer(fromId, color);
-      mesh.position.set(data.x || 0, 0, data.z || 0);
-      remotePlayers[fromId] = { x: data.x || 0, z: data.z || 0, name: data.name || 'Игрок' };
-      addSystemMessage(`👤 ${data.name || 'Игрок'} вошёл в мир`);
-      updateCount();
-      
-      // Отправляем всем остальным
-      if (isHost) {
-        broadcast({
-          type: 'sync',
-          players: remotePlayers
-        });
-      }
-    }
-    
-    if (data.type === 'move') {
-      if (remotePlayerMeshes[fromId]) {
-        remotePlayerMeshes[fromId].position.set(data.x, 0, data.z);
-        if (data.rotation) remotePlayerMeshes[fromId].rotation.y = data.rotation;
-      }
-      if (remotePlayers[fromId]) {
-        remotePlayers[fromId].x = data.x;
-        remotePlayers[fromId].z = data.z;
-      }
-    }
-    
-    if (data.type === 'chat') {
-      addChatMessage(data.name || 'Игрок', data.text, '#ffaa44');
-    }
-    
-    if (data.type === 'sync' && !isHost) {
-      // Синхронизация от хоста
-      for (const id in data.players) {
-        if (id !== myId && !remotePlayerMeshes[id]) {
-          const color = playerColors[Object.keys(remotePlayerMeshes).length % playerColors.length];
-          const mesh = addRemotePlayer(id, color);
-          mesh.position.set(data.players[id].x || 0, 0, data.players[id].z || 0);
-          remotePlayers[id] = data.players[id];
-        }
-      }
-      updateCount();
-    }
-  }
-
   function updateCount() {
-    const count = Object.keys(remotePlayerMeshes).length + 1;
+    const count = Object.keys(remoteMeshes).length + 1;
     document.getElementById('count-display').textContent = count;
   }
 
   // ============================================================
-  // 10. АНИМАЦИЯ
+  // 11. АНИМАЦИЯ
   // ============================================================
   const speed = 0.15;
   let velocityY = 0;
@@ -610,10 +603,10 @@
     camera.position.lerp(offset, 0.1);
     camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
 
-    // ---- ОТПРАВКА ДАННЫХ ----
-    if (moved && Date.now() - lastSentTime > 50) {
+    // ---- ОТПРАВКА НА СЕРВЕР ----
+    if (moved && isConnected && Date.now() - lastSentTime > 50) {
       lastSentTime = Date.now();
-      broadcast({
+      sendToServer({
         type: 'move',
         x: playerPos.x,
         z: playerPos.z,
@@ -627,7 +620,7 @@
   animate();
 
   // ============================================================
-  // 11. RESIZE
+  // 12. RESIZE
   // ============================================================
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -635,6 +628,10 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  // ============================================================
+  // 13. ЗАПУСК
+  // ============================================================
+  connectToServer();
   console.log('🚢 Angelos City — Мультиплеер запущен!');
 </script>
 </body>
