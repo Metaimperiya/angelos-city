@@ -18,6 +18,7 @@ export const PlayerController = {
   },
 
   update(input, delta) {
+    // Получаем направление камеры
     const forward = new THREE.Vector3(0, 0, -1);
     forward.applyQuaternion(camera.quaternion);
     forward.y = 0;
@@ -26,8 +27,9 @@ export const PlayerController = {
     const right = new THREE.Vector3();
     right.crossVectors(forward, camera.up).normalize();
 
-    let moveX = input.moveX;
-    let moveZ = input.moveZ;
+    // Входные данные
+    let moveX = input.moveX; // A/D или влево/вправо
+    let moveZ = input.moveZ; // W/S или вперёд/назад
 
     const speed = 8;
     let moved = false;
@@ -37,6 +39,7 @@ export const PlayerController = {
       moveX /= len;
       moveZ /= len;
 
+      // Движение относительно камеры
       const dx = (forward.x * moveZ + right.x * moveX) * speed * delta;
       const dz = (forward.z * moveZ + right.z * moveX) * speed * delta;
 
@@ -44,10 +47,12 @@ export const PlayerController = {
       this.pos.z += dz;
       moved = true;
 
+      // Поворот персонажа в сторону движения
       this.rotation = Math.atan2(moveX, moveZ);
       this.group.rotation.y = this.rotation;
     }
 
+    // Прыжок и гравитация
     const jumpForce = 4.5;
     const gravity = -12;
 
