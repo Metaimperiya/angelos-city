@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (ТОЧНЫЙ СПАВН ПО ТВОИМ ЛОКАЛЬНЫМ КООРДИНАТАМ)
+// КОРАБЛЬ (СПАВН НА ГЛАВНОЙ ПАЛУБЕ)
 // ============================================================
 
 import * as THREE from 'three';
@@ -10,8 +10,8 @@ import { sendPosition } from '../network/sync.js';
 
 export let mainShip = null;
 
-// 🎯 ТВОИ ТОЧНЫЕ ЛОКАЛЬНЫЕ КООРДИНАТЫ НА КОРАБЛЕ
-export const SPAWN_LOCAL = { x: 0.21, y: 49.53, z: 23.56 };
+// 🎯 Безопасная точка на палубе (НЕ на мачте!)
+export const SPAWN_LOCAL = { x: 0, y: 12, z: -5 };
 
 export let shipSpawnPoint = { x: 0, y: 10, z: 0 };
 
@@ -59,7 +59,7 @@ export function loadShip() {
         scene.add(shipContainer);
         mainShip = shipContainer;
 
-        // 4. 🎯 ПЕРЕВОДИМ ТВОИ ЛОКАЛЬНЫЕ КООРДИНАТЫ В МИРОВЫЕ
+        // 4. Переводим локальные координаты спавна в мировые
         const localVec = new THREE.Vector3(SPAWN_LOCAL.x, SPAWN_LOCAL.y, SPAWN_LOCAL.z);
         const worldVec = shipContainer.localToWorld(localVec);
 
@@ -69,7 +69,7 @@ export function loadShip() {
           z: worldVec.z 
         };
 
-        // Спавним игрока строго в выбранной тобой точке на палубе
+        // Спавним игрока ровно на палубе
         if (playerPos) {
           playerPos.x = shipSpawnPoint.x;
           playerPos.y = shipSpawnPoint.y;
@@ -77,7 +77,7 @@ export function loadShip() {
           sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
         }
 
-        console.log('✅ Спавн точно настроен по твоим точкам:', SPAWN_LOCAL);
+        console.log('✅ Игрок спавнится на палубе!');
         resolve();
       },
       undefined,
