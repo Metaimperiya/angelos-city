@@ -1,83 +1,55 @@
 // ============================================================
-// ИГРОК (СБОРКА)
+// ИГРОК (ЭКСПОРТ, ИНИЦИАЛИЗАЦИЯ И СИНХРОНИЗАЦИЯ C КАМЕРОЙ)
 // ============================================================
 
 import * as THREE from 'three';
 import { scene, camera } from '../../core/scene.js';
-import { teleportToShip } from '../Ship.js';
-import { PlayerInput } from './PlayerInput.js';
 import { PlayerController } from './PlayerController.js';
 import { PlayerCamera } from './PlayerCamera.js';
+import { getInput, initControls as initInputControls } from './PlayerInput.js';
 import { sendPosition } from '../../network/sync.js';
 
-export let playerPos = { x: 0, z: 0, y: 0 };
-let playerGroup;
-let delta = 0;
+export let playerGroup = null;
+export let playerPos = { x: 0, y: 15, z: -15 };
+let delta = 0.016;
 
-export function setDelta(value) {
-  delta = value;
-}
-
-export function initControls() {
-  PlayerInput.init();
-  PlayerCamera.init(camera);
+export function setDelta(d) {
+  delta = d;
 }
 
 export function createPlayer() {
   playerGroup = new THREE.Group();
+
+  // Визуальная заглушка персонажа (капсула/бокс)
+  const geometry = new THREE.BoxGeometry(1, 2, 1);
+  const material = new THREE.MeshLambertMaterial({ color: 0x00ff88 });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.y = 1; 
+  mesh.castShadow = true;
+
+  playerGroup.add(mesh);
+  playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
+
   scene.add(playerGroup);
 
-  const color = 0x00ff88;
-  const bodyMat = new THREE.MeshPhongMaterial({ color, flatShading: true });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.6), bodyMat);
-  body.position.y = 0.7;
-  body.castShadow = true;
-  playerGroup.add(body);
-
-  const headMat = new THREE.MeshPhongMaterial({ color: 0xffccaa, flatShading: true });
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), headMat);
-  head.position.y = 1.5;
-  head.castShadow = true;
-  playerGroup.add(head);
-
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-
-  for (let side = -1; side <= 1; side += 2) {
-    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), eyeMat);
-    eye.position.set(side * 0.2, 1.6, 0.35);
-    playerGroup.add(eye);
-
-    const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), pupilMat);
-    pupil.position.set(side * 0.2, 1.6, 0.45);
-    playerGroup.add(pupil);
-  }
-
-  // Спавн
-  const spawn = teleportToShip();
-  if (spawn) {
-    playerPos.x = spawn.x + (Math.random() - 0.5) * 4;
-    playerPos.z = spawn.z + (Math.random() - 0.5) * 4;
-    playerPos.y = spawn.y;
-  }
-
-  playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
   PlayerController.init(playerGroup, playerPos);
+}
 
-  // 💥 Мгновенно отправляем координаты на сервер, чтобы другие не видели нас под водой (Y=0)
-  sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
+export function initControls() {
+  initInputControls(); // Инициализация клавиш (WASD + touch)
+  PlayerCamera.init(camera); // Инициализация мыши/камеры
 }
 
 export function updatePlayer() {
-  const input = PlayerInput.getInput();
+  if (!playerGroup) return;
+
+  const input = getInput();
   const moved = PlayerController.update(input, delta);
+
   PlayerCamera.update(playerPos, input);
 
-  if (moved) {
+  // Отправка позиции по сокетам
+  if (moved || !PlayerController.isGrounded) {
     sendPosition(playerPos.x, playerPos.y, playerPos.z, PlayerController.getRotation());
   }
-}
-
-export function getPlayerPos() {
-  return playerPos;
 }
