@@ -2,6 +2,9 @@
 // WEB SOCKET (МУЛЬТИПЛЕЕР)
 // ============================================================
 
+import * as THREE from 'three';
+import { scene } from '../core/scene.js';
+
 export let socket;
 export let myId = '';
 export let isConnected = false;
@@ -10,6 +13,32 @@ export const remoteMeshes = {};
 
 let lastSend = 0;
 const TICK_RATE = 20;
+
+// Функция для создания Mesh удалённого игрока (перенесена из game.js)
+function createRemotePlayerMesh(color = 0xff4488) {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshPhongMaterial({ color, flatShading: true });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.6), bodyMat);
+  body.position.y = 0.7;
+  body.castShadow = true;
+  group.add(body);
+  const headMat = new THREE.MeshPhongMaterial({ color: 0xffccaa, flatShading: true });
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), headMat);
+  head.position.y = 1.5;
+  head.castShadow = true;
+  group.add(head);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  for (let side = -1; side <= 1; side += 2) {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), eyeMat);
+    eye.position.set(side * 0.2, 1.6, 0.35);
+    group.add(eye);
+    const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), pupilMat);
+    pupil.position.set(side * 0.2, 1.6, 0.45);
+    group.add(pupil);
+  }
+  return group;
+}
 
 export function initSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -21,7 +50,7 @@ export function initSocket() {
     console.log('🟢 Подключено к серверу');
     document.getElementById('loading').textContent = '✅ Подключено!';
     
-    // ⬇️ ЭТО САМОЕ ВАЖНОЕ: ОТПРАВЛЯЕМ ПРИВЕТСТВИЕ СЕРВЕРУ ⬇️
+    // Отправляем приветствие серверу
     socket.send(JSON.stringify({
       type: 'join',
       name: 'Игрок_' + Math.random().toString(36).substr(2, 4),
@@ -43,7 +72,6 @@ export function initSocket() {
       if (data.type === 'init') {
         myId = data.myId;
         console.log('Мой ID:', myId);
-        // Создаём удалённых игроков из списка
         for (const id in data.players) {
           if (id !== myId) {
             addRemotePlayer(id, data.players[id]);
@@ -92,20 +120,37 @@ export function sendPosition(x, z, rotation) {
 }
 
 // ============================================================
-// УДАЛЁННЫЕ ИГРОКИ
+// УДАЛЁННЫЕ ИГРОКИ (ТЕПЕРЬ РАБОТАЮТ)
 // ============================================================
 
-// Сюда мы будем добавлять создание Mesh для удалённых игроков
 function addRemotePlayer(id, data) {
-  console.log('➕ Добавляем игрока:', id, data);
-  // Пока просто заглушка — позже добавим создание Mesh
+  if (remoteMeshes[id]) return;
+  console.log('➕ Создаём Mesh для игрока:', id, data);
+  
+  const color = data.color || 0xff4488;
+  const mesh = createRemotePlayerMesh(color);
+  mesh.position.set(data.x || 0, 0, data.z || 0);
+  scene.add(mesh);
+  remoteMeshes[id] = mesh;
+  
+  // Сохраняем данные игрока
+  remotePlayers[id] = data;
 }
 
 function updateRemotePlayer(id, data) {
-  // Пока заглушка — позже добавим обновление позиции
+  if (remoteMeshes[id]) {
+    remoteMeshes[id].position.set(data.x || 0, 0, data.z || 0);
+    if (data.rotation !== undefined) {
+      remoteMeshes[id].rotation.y = data.rotation;
+    }
+  }
 }
 
 function removeRemotePlayer(id) {
   console.log('➖ Удаляем игрока:', id);
-  // Пока заглушка — позже удалим Mesh
+  if (remoteMeshes[id]) {
+    scene.remove(remoteMeshes[id]);
+    delete remoteMeshes[id];
+    delete remotePlayers[id];
+  }
 }
