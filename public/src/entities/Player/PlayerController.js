@@ -1,5 +1,5 @@
 // ============================================================
-// ФИЗИКА И ДВИЖЕНИЕ (БЕЗ ПРОВАЛОВ СКВОЗЬ ТЕКСТУРЫ)
+// ФИЗИКА И ДВИЖЕНИЕ (БЕЗ МЕРТВЫХ БЛОКИРОВОК ХОДЬБЫ)
 // ============================================================
 
 import * as THREE from 'three';
@@ -28,7 +28,7 @@ export const PlayerController = {
     let moveX = input.moveX;
     let moveZ = input.moveZ;
 
-    const speed = 11;
+    const speed = 12;
     let moved = false;
 
     if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
@@ -43,24 +43,24 @@ export const PlayerController = {
       let dx = (-normZ * sin + normX * cos) * speed * delta;
       let dz = (-normZ * cos - normX * sin) * speed * delta;
 
-      // Проверка столкновений
+      // 🛑 ПРОВЕРКА СТЕН (луч на уровне груди +1.2м, исключая блокировку пола)
       if (mainShip) {
         if (dx !== 0) {
           moveVector.set(Math.sign(dx), 0, 0);
-          rayOrigin.set(this.pos.x, this.pos.y + 0.8, this.pos.z);
+          rayOrigin.set(this.pos.x, this.pos.y + 1.2, this.pos.z);
           forwardRaycaster.set(rayOrigin, moveVector);
           const hits = forwardRaycaster.intersectObject(mainShip, true);
-          if (hits.length > 0 && hits[0].distance < 0.7) {
-            if (Math.abs(hits[0].face.normal.y) < 0.5) dx = 0;
+          if (hits.length > 0 && hits[0].distance > 0.25 && hits[0].distance < 0.6) {
+            if (Math.abs(hits[0].face.normal.y) < 0.3) dx = 0;
           }
         }
         if (dz !== 0) {
           moveVector.set(0, 0, Math.sign(dz));
-          rayOrigin.set(this.pos.x + dx, this.pos.y + 0.8, this.pos.z);
+          rayOrigin.set(this.pos.x + dx, this.pos.y + 1.2, this.pos.z);
           forwardRaycaster.set(rayOrigin, moveVector);
           const hits = forwardRaycaster.intersectObject(mainShip, true);
-          if (hits.length > 0 && hits[0].distance < 0.7) {
-            if (Math.abs(hits[0].face.normal.y) < 0.5) dz = 0;
+          if (hits.length > 0 && hits[0].distance > 0.25 && hits[0].distance < 0.6) {
+            if (Math.abs(hits[0].face.normal.y) < 0.3) dz = 0;
           }
         }
       }
@@ -73,32 +73,33 @@ export const PlayerController = {
       this.group.rotation.y = this.rotation;
     }
 
-    // 🌊 ИЩЕМ ПАЛУБЫ/ПОЛ (Сканируем до 100 метров вниз)
+    // 🌊 ПОИСК ПАЛУБЫ ПОД НОГАМИ
     let floorY = 0; // Вода по умолчанию
     if (mainShip) {
-      rayOrigin.set(this.pos.x, this.pos.y + 3, this.pos.z);
+      rayOrigin.set(this.pos.x, this.pos.y + 5.0, this.pos.z);
       downRaycaster.set(rayOrigin, downVector);
       const hits = downRaycaster.intersectObject(mainShip, true);
 
       if (hits.length > 0) {
-        const hit = hits[0];
-        // Увеличили дистанцию проверки с 20 до 100 метров!
-        if (hit.point.y >= -1 && (this.pos.y + 3 - hit.point.y) <= 100) {
-          floorY = hit.point.y;
+        for (let i = 0; i < hits.length; i++) {
+          if (hits[i].point.y <= this.pos.y + 2.0) {
+            floorY = hits[i].point.y;
+            break;
+          }
         }
       }
     }
 
-    // Прыжки и гравитация
-    const jumpForce = 7;
-    const gravity = -20;
+    // 🥾 ПРЫЖКИ И ГРАВИТАЦИЯ
+    const jumpForce = 8;
+    const gravity = -22;
 
     if (input.jump && this.isGrounded) {
       this.velocityY = jumpForce;
       this.isGrounded = false;
     }
 
-    if (this.pos.y > floorY + 0.2 && this.isGrounded) {
+    if (this.pos.y > floorY + 0.3 && this.isGrounded) {
       this.isGrounded = false;
     }
 
