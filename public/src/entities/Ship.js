@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (ПОСАЖЕН НА ВОДУ + ТОЧНЫЙ СПАВН НА ПАЛУБЕ)
+// КОРАБЛЬ (СТАБИЛЬНАЯ ВЕРСИЯ - 1 КОРАБЛЬ НА ВОДЕ)
 // ============================================================
 
 import * as THREE from 'three';
@@ -31,7 +31,7 @@ export function loadShip() {
 
         shipContainer.add(shipModel);
 
-        // 2. Увеличиваем размер до 130м (оптимальный игрой масштаб)
+        // 2. Масштаб (130м)
         const TARGET_SIZE = 130; 
         const maxDim = Math.max(size.x, size.z);
         const scale = TARGET_SIZE / (maxDim || 1);
@@ -48,14 +48,14 @@ export function loadShip() {
           }
         });
 
-        // 3. 🌊 СПУСКАЕМ НА ВОДУ (опускаем ниже уровня Y=0, чтобы киль ушел в воду)
+        // 3. Посадка на воду
         const shipHeight = size.y * scale;
         shipContainer.position.set(0, -shipHeight * 0.35, 0);
 
         scene.add(shipContainer);
         mainShip = shipContainer;
 
-        // 4. Находим точную высоту палубы (Raycast сверху вниз)
+        // 4. Поиск высоты палубы
         const raycaster = new THREE.Raycaster(
           new THREE.Vector3(0, 100, 0),
           new THREE.Vector3(0, -1, 0)
@@ -68,7 +68,7 @@ export function loadShip() {
           shipSpawnPoint = { x: 0, y: 5, z: 0 };
         }
 
-        // 💥 МГНОВЕННО ТЕЛЕПОРТИРУЕМ ИГРОКА НА ПАЛУБЕ ПОСЛЕ ЗАГРУЗКИ МОДЕЛИ
+        // Спавн игрока
         if (playerPos) {
           playerPos.x = shipSpawnPoint.x + (Math.random() - 0.5) * 4;
           playerPos.z = shipSpawnPoint.z + (Math.random() - 0.5) * 4;
