@@ -1,5 +1,5 @@
 // ============================================================
-// ГЛАВНЫЙ ФАЙЛ (упрощённый)
+// ГЛАВНЫЙ ФАЙЛ
 // ============================================================
 
 import { initScene, scene, camera, renderer } from './core/scene.js';
@@ -20,17 +20,11 @@ initScene();
 // 2. Мир (море)
 createWorld();
 
-// 3. Загружаем один корабль
+// 3. Загружаем корабль
 await loadShip();
 
-// 4. Создаём игрока и ставим на палубу
+// 4. Создаём игрока
 createPlayer();
-const spawnPos = teleportToShip();
-if (spawnPos) {
-  const playerPos = getPlayerPos();
-  playerPos.x = spawnPos.x;
-  playerPos.z = spawnPos.z;
-}
 
 // 5. Сокет
 initSocket();
