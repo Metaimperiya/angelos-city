@@ -1,9 +1,9 @@
 // ============================================================
-// ИГРОК + УПРАВЛЕНИЕ
+// ИГРОК + УПРАВЛЕНИЕ (МЫШЬ, WASD, ПРЫЖОК)
 // ============================================================
 
 import * as THREE from 'three';
-import { scene, camera } from '../core/scene.js';
+import { scene, camera, renderer } from '../core/scene.js';
 import { teleportToShip } from './Ship.js';
 
 export let playerPos = { x: 0, z: 0, y: 0 };
@@ -28,7 +28,8 @@ let isPointerLocked = false;
 let euler = { x: 0, y: 0 };
 
 export function initControls() {
-  document.addEventListener('click', () => {
+  // Захват мыши по клику
+  renderer.domElement.addEventListener('click', () => {
     renderer.domElement.requestPointerLock();
   });
   document.addEventListener('pointerlockchange', () => {
@@ -82,7 +83,6 @@ export function createPlayer() {
   }
 
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
-  initControls();
 }
 
 export function updatePlayer() {
@@ -101,7 +101,6 @@ export function updatePlayer() {
   if (keys['a'] || keys['arrowleft']) moveX -= 1;
   if (keys['d'] || keys['arrowright']) moveX += 1;
 
-  let moved = false;
   if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
     const len = Math.hypot(moveX, moveZ);
     moveX /= len;
@@ -112,7 +111,6 @@ export function updatePlayer() {
 
     playerPos.x += dx;
     playerPos.z += dz;
-    moved = true;
     const angle = Math.atan2(moveX, moveZ);
     playerGroup.rotation.y = angle;
   }
