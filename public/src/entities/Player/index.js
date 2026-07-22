@@ -13,18 +13,26 @@ export let playerGroup = null;
 export let playerPos = { x: 0, y: 15, z: -15 };
 let delta = 0.016;
 
+let prevPos = { x: 0, y: 0, z: 0 };
+const EPSILON = 0.001;
+
 export function setDelta(d) {
   delta = d;
+}
+
+export function resetSyncPosition() {
+  prevPos.x = playerPos.x;
+  prevPos.y = playerPos.y;
+  prevPos.z = playerPos.z;
 }
 
 export function createPlayer() {
   playerGroup = new THREE.Group();
 
-  // Визуальная заглушка персонажа (капсула/бокс)
   const geometry = new THREE.BoxGeometry(1, 2, 1);
   const material = new THREE.MeshLambertMaterial({ color: 0x00ff88 });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.y = 1; 
+  mesh.position.y = 1;
   mesh.castShadow = true;
 
   playerGroup.add(mesh);
@@ -33,23 +41,33 @@ export function createPlayer() {
   scene.add(playerGroup);
 
   PlayerController.init(playerGroup, playerPos);
+
+  // Сброс синхронизации после создания
+  resetSyncPosition();
 }
 
 export function initControls() {
-  initInputControls(); // Инициализация клавиш (WASD + touch)
-  PlayerCamera.init(camera); // Инициализация мыши/камеры
+  initInputControls();
+  PlayerCamera.init(camera);
 }
 
 export function updatePlayer() {
   if (!playerGroup) return;
 
   const input = getInput();
-  const moved = PlayerController.update(input, delta);
-
+  PlayerController.update(input, delta);
   PlayerCamera.update(playerPos, input);
 
-  // Отправка позиции по сокетам
-  if (moved || !PlayerController.isGrounded) {
+  const hasMoved =
+    Math.abs(playerPos.x - prevPos.x) > EPSILON ||
+    Math.abs(playerPos.y - prevPos.y) > EPSILON ||
+    Math.abs(playerPos.z - prevPos.z) > EPSILON;
+
+  if (hasMoved) {
     sendPosition(playerPos.x, playerPos.y, playerPos.z, PlayerController.getRotation());
+
+    prevPos.x = playerPos.x;
+    prevPos.y = playerPos.y;
+    prevPos.z = playerPos.z;
   }
 }
