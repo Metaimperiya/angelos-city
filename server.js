@@ -13,27 +13,31 @@ const players = {};
 
 wss.on('connection', (ws) => {
   const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
-  
+
+  // Создаем игрока
   players[id] = {
     x: (Math.random() - 0.5) * 10,
     z: (Math.random() - 0.5) * 10,
-    y: 0,
+    y: 8, // Начальная высота палубы
     color: Math.floor(Math.random() * 0xffffff),
     name: 'Игрок_' + Math.random().toString(36).substr(2, 4)
   };
 
   console.log(`🟢 Игрок ${id} подключился (${Object.keys(players).length} всего)`);
 
+  // Отправляем новому игроку его ID и список текущих игроков
   ws.send(JSON.stringify({
     type: 'init',
     players: players,
     myId: id
   }));
 
+  // Рассылаем остальным информацию о новом игроке (ВКЛЮЧАЯ Y)
   broadcast({
     type: 'playerJoin',
     id: id,
     x: players[id].x,
+    y: players[id].y, // 👈 ДОБАВЛЕНО
     z: players[id].z,
     color: players[id].color,
     name: players[id].name
@@ -42,18 +46,25 @@ wss.on('connection', (ws) => {
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
+
       if (data.type === 'move' && players[id]) {
+        // Сохраняем позиции (ВКЛЮЧАЯ ВЫСОТУ Y)
         players[id].x = data.x;
+        players[id].y = data.y !== undefined ? data.y : players[id].y; // 👈 ДОБАВЛЕНО
         players[id].z = data.z;
         players[id].rotation = data.rotation || 0;
+
+        // Рассылаем новую позицию другим игрокам
         broadcast({
           type: 'playerMove',
           id: id,
           x: data.x,
+          y: players[id].y, // 👈 ДОБАВЛЕНО
           z: data.z,
           rotation: data.rotation || 0
         }, ws);
       }
+
       if (data.type === 'chat') {
         broadcast({
           type: 'chat',
@@ -62,7 +73,9 @@ wss.on('connection', (ws) => {
           name: players[id]?.name || 'Игрок'
         }, ws);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Ошибка обработки сообщения:', e);
+    }
   });
 
   ws.on('close', () => {
