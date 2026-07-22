@@ -48,7 +48,6 @@ export const PlayerController = {
       this.group.rotation.y = this.rotation;
     }
 
-    // Прыжок
     const jumpForce = 4.5;
     const gravity = -12;
 
