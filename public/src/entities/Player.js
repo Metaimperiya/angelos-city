@@ -1,9 +1,10 @@
 // ============================================================
-// ИГРОК (упрощённый)
+// ИГРОК
 // ============================================================
 
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 import { scene, camera } from '../core/scene.js';
+import { teleportToShip } from './Ship.js';
 
 export let playerPos = { x: 0, z: 0, y: 0 };
 let playerGroup;
@@ -37,12 +38,18 @@ export function createPlayer() {
     playerGroup.add(pupil);
   }
 
+  // Телепорт на корабль
+  const spawn = teleportToShip();
+  if (spawn) {
+    playerPos.x = spawn.x;
+    playerPos.z = spawn.z;
+  }
+
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
 }
 
 export function updatePlayer() {
-  // Пока просто стоит на месте
-  // Сюда добавим управление позже
+  // Пока пусто — просто стоим
 }
 
 export function getPlayerPos() {
