@@ -1,0 +1,124 @@
+// ============================================================
+// СИНХРОНИЗАЦИЯ УДАЛЁННЫХ ИГРОКОВ
+// ============================================================
+
+import * as THREE from 'three';
+import { scene } from '../core/scene.js';
+import { sendToServer } from './socket.js';
+
+export const remotePlayers = {};
+export const remoteMeshes = {};
+export let myId = '';
+
+// Фабрика создания Mesh для удалённого игрока
+function createRemotePlayerMesh(color = 0xff4488) {
+  const group = new THREE.Group();
+  const bodyMat = new THREE.MeshPhongMaterial({ color, flatShading: true });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.6), bodyMat);
+  body.position.y = 0.7;
+  body.castShadow = true;
+  group.add(body);
+  const headMat = new THREE.MeshPhongMaterial({ color: 0xffccaa, flatShading: true });
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), headMat);
+  head.position.y = 1.5;
+  head.castShadow = true;
+  group.add(head);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  for (let side = -1; side <= 1; side += 2) {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), eyeMat);
+    eye.position.set(side * 0.2, 1.6, 0.35);
+    group.add(eye);
+    const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), pupilMat);
+    pupil.position.set(side * 0.2, 1.6, 0.45);
+    group.add(pupil);
+  }
+  return group;
+}
+
+export function initSync(socket) {
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('📩 Получено сообщение:', data.type, data);
+
+      switch (data.type) {
+        case 'init':
+          myId = data.myId;
+          console.log('Мой ID:', myId);
+          for (const id in data.players) {
+            if (id !== myId) {
+              addRemotePlayer(id, data.players[id]);
+            }
+          }
+          break;
+
+        case 'playerJoin':
+          console.log('👤 Новый игрок:', data.id);
+          addRemotePlayer(data.id, data);
+          break;
+
+        case 'playerMove':
+          updateRemotePlayer(data.id, data);
+          break;
+
+        case 'playerLeave':
+          console.log('👤 Игрок ушёл:', data.id);
+          removeRemotePlayer(data.id);
+          break;
+
+        default:
+          console.log('⚠️ Неизвестный тип:', data.type);
+      }
+    } catch (e) {
+      console.error('Ошибка парсинга:', e);
+    }
+  };
+}
+
+export function addRemotePlayer(id, data) {
+  if (remoteMeshes[id]) return;
+  console.log('➕ Создаём Mesh для игрока:', id);
+
+  const color = data.color || 0xff4488;
+  const mesh = createRemotePlayerMesh(color);
+  mesh.position.set(data.x || 0, 0, data.z || 0);
+  scene.add(mesh);
+  remoteMeshes[id] = mesh;
+  remotePlayers[id] = data;
+}
+
+export function updateRemotePlayer(id, data) {
+  if (remoteMeshes[id]) {
+    remoteMeshes[id].position.set(data.x || 0, 0, data.z || 0);
+    if (data.rotation !== undefined) {
+      remoteMeshes[id].rotation.y = data.rotation;
+    }
+  }
+}
+
+export function removeRemotePlayer(id) {
+  console.log('➖ Удаляем игрока:', id);
+  if (remoteMeshes[id]) {
+    scene.remove(remoteMeshes[id]);
+    delete remoteMeshes[id];
+    delete remotePlayers[id];
+  }
+}
+
+// Отправка своей позиции на сервер (с тикрейтом)
+let lastSend = 0;
+const TICK_RATE = 20;
+
+export function sendPosition(x, z, rotation) {
+  const now = performance.now();
+  if (now - lastSend < 1000 / TICK_RATE) return;
+  lastSend = now;
+
+  sendToServer({
+    type: 'move',
+    x: x,
+    z: z,
+    rotation: rotation || 0
+  });
+}
