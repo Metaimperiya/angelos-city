@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (АВТОМАТИЧЕСКИЙ СПАВН СТРОГО НАД ПАЛУБОЙ)
+// КОРАБЛЬ (СПАВН НА ОТКРЫТОЙ ПАЛУБЕ)
 // ============================================================
 
 import * as THREE from 'three';
@@ -9,7 +9,7 @@ import { playerPos } from './Player/index.js';
 import { sendPosition } from '../network/sync.js';
 
 export let mainShip = null;
-export let shipSpawnPoint = { x: 0, y: 15, z: 0 };
+export let shipSpawnPoint = { x: 0, y: 15, z: -15 };
 
 export function loadShip() {
   return new Promise((resolve) => {
@@ -55,23 +55,21 @@ export function loadShip() {
         scene.add(shipContainer);
         mainShip = shipContainer;
 
-        // 4. 🔥 АВТО-ПОИСК ВЕРХНЕЙ ТОЧКИ ПАЛУБЫ
-        // Сканируем сверху вниз с высоты 150м по центру корабля
+        // 4. Ищем пол на открытой части палубы (z: -15)
         const raycaster = new THREE.Raycaster(
-          new THREE.Vector3(0, 150, 0),
+          new THREE.Vector3(0, 150, -15),
           new THREE.Vector3(0, -1, 0)
         );
         const hits = raycaster.intersectObject(shipContainer, true);
 
         if (hits.length > 0) {
-          // Ставим игрока на 1.5 метра ВЫШЕ поверхности палубы
           shipSpawnPoint = { 
-            x: hits[0].point.x, 
-            y: hits[0].point.y + 1.5, 
-            z: hits[0].point.z 
+            x: 0, 
+            y: hits[0].point.y + 1.0, 
+            z: -15 
           };
         } else {
-          shipSpawnPoint = { x: 0, y: 18, z: 0 };
+          shipSpawnPoint = { x: 0, y: 15, z: -15 };
         }
 
         // Спавним игрока
@@ -82,7 +80,7 @@ export function loadShip() {
           sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
         }
 
-        console.log('✅ Игрок заспавнен над палубой:', shipSpawnPoint);
+        console.log('✅ Заспавнен на свободной палубе:', shipSpawnPoint);
         resolve();
       },
       undefined,
@@ -102,9 +100,7 @@ window.addEventListener('keydown', (e) => {
 
     const coordsString = `x: ${shipLocalVec.x.toFixed(2)}, y: ${shipLocalVec.y.toFixed(2)}, z: ${shipLocalVec.z.toFixed(2)}`;
     
-    console.log('%c 🎯 ЛОКАЛЬНАЯ ТОЧКА НА КОРАБЛЕ:', 'background: #222; color: #bada55; font-size: 16px');
-    console.log(coordsString);
-
+    console.log('🎯 ЛОКАЛЬНАЯ ТОЧКА:', coordsString);
     alert(`📍 Координаты точки на корабле:\n\n${coordsString}\n\n(Скопируй из F12)`);
   }
 });
