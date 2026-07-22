@@ -1,5 +1,5 @@
 // ============================================================
-// ВЕРТИКАЛЬНАЯ МОБИЛЬНАЯ ВЕРСИЯ + МЫШЬ
+// УНИВЕРСАЛЬНОЕ УПРАВЛЕНИЕ: ПК (МЫШЬ + WASD) + ТЕЛЕФОН (ДЖОЙСТИК)
 // ============================================================
 
 // ============================================================
@@ -170,7 +170,7 @@ loader.load(
 );
 
 // ============================================================
-// 8. УПРАВЛЕНИЕ (КЛАВИАТУРА + МЫШЬ)
+// 8. УПРАВЛЕНИЕ
 // ============================================================
 const keys = {};
 window.addEventListener('keydown', (e) => {
@@ -186,21 +186,17 @@ window.addEventListener('keyup', (e) => {
   keys[e.code] = false;
 });
 
-// МЫШЬ - клик для захвата + движение
+// ============================================================
+// 8a. ПК: МЫШЬ
+// ============================================================
 let isPointerLocked = false;
-
-// Захват мыши по клику на канвас
 renderer.domElement.addEventListener('click', () => {
   renderer.domElement.requestPointerLock();
 });
-
-// Следим за состоянием блокировки
 document.addEventListener('pointerlockchange', () => {
   isPointerLocked = document.pointerLockElement === renderer.domElement;
-  // Если мышка отжата (ESC) — ничего не делаем, просто ждём нового клика
 });
 
-// Движение мыши (только когда заблокирована)
 let euler = { x: 0, y: 0 };
 document.addEventListener('mousemove', (e) => {
   if (!isPointerLocked) return;
@@ -213,7 +209,7 @@ document.addEventListener('mousemove', (e) => {
 });
 
 // ============================================================
-// 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ (ЗОНЫ)
+// 8b. ТЕЛЕФОН: ДЖОЙСТИК (ЦЕНТР) + КАМЕРА (ПРАВЫЙ КРАЙ)
 // ============================================================
 const moveZone = document.createElement('div');
 moveZone.style.cssText = 'position:absolute;top:0;left:0;width:75%;height:100%;z-index:40;touch-action:none;';
@@ -231,6 +227,7 @@ let moveDelta = { x: 0, y: 0 };
 let lookDelta = { x: 0, y: 0 };
 let jumpPressed = false;
 
+// --- Центр: движение + поворот ---
 moveZone.addEventListener('touchstart', (e) => {
   e.preventDefault();
   const touch = e.changedTouches[0];
@@ -266,6 +263,7 @@ moveZone.addEventListener('touchcancel', () => {
   moveDelta = { x: 0, y: 0 };
 });
 
+// --- Правый край: камера вверх/вниз ---
 lookZone.addEventListener('touchstart', (e) => {
   e.preventDefault();
   const touch = e.changedTouches[0];
@@ -299,6 +297,7 @@ lookZone.addEventListener('touchcancel', () => {
   lookDelta = { x: 0, y: 0 };
 });
 
+// --- Кнопка прыжка ---
 const jumpBtn = document.getElementById('jump-btn');
 if (jumpBtn) {
   jumpBtn.addEventListener('touchstart', (e) => {
@@ -321,7 +320,7 @@ if (jumpBtn) {
 }
 
 // ============================================================
-// 10. ЧАТ
+// 9. ЧАТ
 // ============================================================
 let chatVisible = false;
 const chatLog = document.getElementById('chat-log');
@@ -374,7 +373,7 @@ function updateCount() {
 }
 
 // ============================================================
-// 11. СОКЕТ
+// 10. СОКЕТ
 // ============================================================
 socket.onopen = () => {
   isConnected = true;
@@ -451,7 +450,7 @@ socket.onclose = () => {
 };
 
 // ============================================================
-// 12. АНИМАЦИЯ
+// 11. АНИМАЦИЯ
 // ============================================================
 const speed = 0.15;
 let velocityY = 0;
@@ -461,17 +460,26 @@ let lastSentTime = 0;
 function animate() {
   requestAnimationFrame(animate);
 
+  // --- Телефон: джойстик (движение + поворот) ---
   const moveForward = -moveDelta.y * 0.02;
   const moveTurn = moveDelta.x * 0.02;
   const lookUp = lookDelta.y * 0.02;
 
-  euler.y += moveTurn;
-  euler.x += lookUp;
-  euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
+  // Применяем поворот от джойстика (только если есть движение)
+  if (Math.abs(moveTurn) > 0.01) {
+    euler.y += moveTurn;
+  }
+  // Применяем камеру от правого края
+  if (Math.abs(lookUp) > 0.01) {
+    euler.x += lookUp;
+    euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
+  }
+
   camera.rotation.order = 'YXZ';
   camera.rotation.x = euler.x;
   camera.rotation.y = euler.y;
 
+  // --- Направление движения ---
   const forward = new THREE.Vector3(0, 0, -1);
   forward.applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -482,19 +490,21 @@ function animate() {
 
   let moveX = 0, moveZ = 0;
   
+  // --- ПК: WASD ---
   if (keys['w'] || keys['arrowup']) moveZ += 1;
   if (keys['s'] || keys['arrowdown']) moveZ -= 1;
   if (keys['a'] || keys['arrowleft']) moveX -= 1;
   if (keys['d'] || keys['arrowright']) moveX += 1;
   
-  if (Math.abs(moveForward) > 0.05) {
+  // --- Телефон: движение вперёд/назад от джойстика ---
+  if (Math.abs(moveForward) > 0.01) {
     moveZ += moveForward;
   }
 
   let moved = false;
   let angle = 0;
 
-  if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
+  if (Math.abs(moveX) > 0.01 || Math.abs(moveZ) > 0.01) {
     const len = Math.hypot(moveX, moveZ);
     moveX /= len;
     moveZ /= len;
@@ -509,6 +519,7 @@ function animate() {
     playerGroup.rotation.y = angle;
   }
 
+  // --- Прыжок ---
   let jump = keys['space'] || keys['Space'] || jumpPressed;
   if (jump && isGrounded) {
     velocityY = 0.2;
@@ -527,6 +538,7 @@ function animate() {
 
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
 
+  // --- Камера ---
   const offset = new THREE.Vector3(0, 2.5, 6);
   offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), euler.y);
   offset.x += playerPos.x;
@@ -536,6 +548,7 @@ function animate() {
   camera.position.lerp(offset, 0.1);
   camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
 
+  // --- Отправка на сервер ---
   if (moved && isConnected && Date.now() - lastSentTime > 50 && socket.readyState === WebSocket.OPEN) {
     lastSentTime = Date.now();
     socket.send(JSON.stringify({
@@ -552,7 +565,7 @@ function animate() {
 animate();
 
 // ============================================================
-// 13. RESIZE
+// 12. RESIZE
 // ============================================================
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
