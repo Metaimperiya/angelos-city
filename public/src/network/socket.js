@@ -1,31 +1,43 @@
 // ============================================================
-// WEB SOCKET (ТОЛЬКО ПОДКЛЮЧЕНИЕ)
+// WEB SOCKET (ТОЛЬКО ПОДКЛЮЧЕНИЕ И ТРАНСПОРТ)
 // ============================================================
-
-export let socket;
+export let socket = null;
 export let isConnected = false;
 let reconnectTimer = null;
+let onMessageHandler = null;
+
+export function onMessage(handler) {
+  onMessageHandler = handler;
+}
 
 export function initSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.host;
+
   socket = new WebSocket(`${protocol}//${host}`);
 
   socket.onopen = () => {
     isConnected = true;
     console.log('🟢 Подключено к серверу');
-    document.getElementById('loading').textContent = '✅ Подключено!';
-    setTimeout(() => {
-      const el = document.getElementById('loading');
-      if (el) el.style.display = 'none';
-    }, 1000);
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+      loadingEl.textContent = '✅ Подключено!';
+      setTimeout(() => { loadingEl.style.display = 'none'; }, 1000);
+    }
+  };
+
+  socket.onmessage = (event) => {
+    if (onMessageHandler) {
+      onMessageHandler(event);
+    }
   };
 
   socket.onclose = () => {
     isConnected = false;
     console.log('🔴 Отключено от сервера');
-    document.getElementById('loading').textContent = '❌ Потеря соединения';
-    // Автопереподключение через 3 секунды
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.textContent = '❌ Потеря соединения';
+
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(() => {
       console.log('🔄 Переподключение...');
