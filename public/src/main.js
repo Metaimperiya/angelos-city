@@ -3,7 +3,6 @@
 // ============================================================
 
 import * as THREE from 'three';
-
 import { initScene, scene, camera, renderer } from './core/scene.js';
 import { createWorld } from './core/world.js';
 import { loadShip } from './entities/Ship.js';
