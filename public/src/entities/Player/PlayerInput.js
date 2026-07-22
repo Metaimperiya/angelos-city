@@ -151,7 +151,7 @@ export const PlayerInput = {
     const tx = this.touchMove.x * 0.02;
     const tz = this.touchMove.y * 0.02;
 
-    return {
+    const result = {
       moveX: moveX + tx,
       moveZ: moveZ + tz,
       mouseX: this.mouseX,
@@ -161,6 +161,11 @@ export const PlayerInput = {
       jump: this.keys['space'] || this.keys['Space'] || this.jump,
       moved: Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05 || Math.abs(tx) > 0.05 || Math.abs(tz) > 0.05
     };
+
+    // ⬇️ ЭТА СТРОЧКА СБРАСЫВАЕТ НАКОПЛЕНИЕ МЫШИ, ЧТОБЫ ОНА НЕ УЛЕТАЛА
+    this.resetMouse();
+
+    return result;
   },
 
   resetMouse() {
