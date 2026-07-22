@@ -62,9 +62,7 @@ wss.on('connection', (ws) => {
           name: players[id]?.name || 'Игрок'
         }, ws);
       }
-    } catch (e) {
-      console.error('Ошибка обработки сообщения:', e);
-    }
+    } catch (e) {}
   });
 
   ws.on('close', () => {
