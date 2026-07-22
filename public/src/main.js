@@ -5,7 +5,7 @@
 import { initScene, scene, camera, renderer } from './core/scene.js';
 import { createWorld } from './core/world.js';
 import { loadShip } from './entities/Ship.js';
-import { createPlayer, initControls } from './entities/Player.js';
+import { createPlayer, initControls, updatePlayer } from './entities/Player.js';
 import { initSocket } from './network/socket.js';
 import { initChat } from './ui/chat.js';
 import { updateHUD } from './ui/hud.js';
@@ -23,7 +23,7 @@ createWorld();
 // 3. Загружаем корабль
 await loadShip();
 
-// 4. Управление (мышь)
+// 4. Управление (мышь + телефон)
 initControls();
 
 // 5. Создаём игрока
@@ -44,6 +44,10 @@ updateHUD(1);
 
 function animate() {
   requestAnimationFrame(animate);
+
+  // Обновление игрока (движение, камера)
+  updatePlayer();
+
   renderer.render(scene, camera);
 }
 
