@@ -1,17 +1,21 @@
 // ============================================================
-// ИГРОК + УПРАВЛЕНИЕ (МЫШЬ, WASD, ПРЫЖОК, ТЕЛЕФОН)
+// ИГРОК + УПРАВЛЕНИЕ (ВСЕ ФИКСЫ)
 // ============================================================
 
 import * as THREE from 'three';
 import { scene, camera, renderer } from '../core/scene.js';
 import { teleportToShip } from './Ship.js';
-import { socket, sendPosition } from '../network/socket.js';
+import { sendPosition, socket } from '../network/socket.js';
 
 export let playerPos = { x: 0, z: 0, y: 0 };
 let playerGroup;
 let velocityY = 0;
 let isGrounded = true;
-const speed = 0.15;
+let delta = 0;
+
+export function setDelta(value) {
+  delta = value;
+}
 
 // ============================================================
 // КЛАВИАТУРА
@@ -27,7 +31,7 @@ window.addEventListener('keyup', (e) => {
 });
 
 // ============================================================
-// МЫШЬ
+// МЫШЬ (ФИКС 2)
 // ============================================================
 let isPointerLocked = false;
 let euler = { x: 0, y: 0 };
@@ -51,19 +55,17 @@ export function initControls() {
 }
 
 // ============================================================
-// ТЕЛЕФОН: ДЖОЙСТИК (ЦЕНТР) + КАМЕРА (ПРАВЫЙ КРАЙ)
+// ТЕЛЕФОН
 // ============================================================
 let touchMove = { x: 0, y: 0 };
 let touchLook = { x: 0, y: 0 };
 let jumpPressed = false;
 
 export function initTouchControls() {
-  // Зона движения (75% экрана)
   const moveZone = document.createElement('div');
   moveZone.style.cssText = 'position:absolute;top:0;left:0;width:75%;height:100%;z-index:40;touch-action:none;';
   document.body.appendChild(moveZone);
 
-  // Зона камеры (25% экрана)
   const lookZone = document.createElement('div');
   lookZone.style.cssText = 'position:absolute;top:0;right:0;width:25%;height:100%;z-index:40;touch-action:none;';
   document.body.appendChild(lookZone);
@@ -120,8 +122,10 @@ export function initTouchControls() {
     e.preventDefault();
     for (const touch of e.changedTouches) {
       if (touch.identifier === touchLookId) {
+        const dx = touch.clientX - lastLookPos.x;
         const dy = touch.clientY - lastLookPos.y;
-        touchLook.y = dy;
+        touchLook.x += dx;
+        touchLook.y += dy;
         lastLookPos = { x: touch.clientX, y: touch.clientY };
       }
     }
@@ -141,7 +145,6 @@ export function initTouchControls() {
     touchLook = { x: 0, y: 0 };
   });
 
-  // Кнопка прыжка
   const jumpBtn = document.getElementById('jump-btn');
   if (jumpBtn) {
     jumpBtn.addEventListener('touchstart', (e) => {
@@ -184,7 +187,6 @@ export function createPlayer() {
   head.castShadow = true;
   playerGroup.add(head);
 
-  // Глаза
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
   for (let side = -1; side <= 1; side += 2) {
@@ -196,23 +198,25 @@ export function createPlayer() {
     playerGroup.add(pupil);
   }
 
-  // Телепорт на корабль
+  // ФИКС 3: Телепорт на корабль при спавне
   const spawn = teleportToShip();
   if (spawn) {
-    playerPos.x = spawn.x;
-    playerPos.z = spawn.z;
+    playerPos.x = spawn.x + (Math.random() - 0.5) * 1.5;
+    playerPos.z = spawn.z + (Math.random() - 0.5) * 1.5;
+  } else {
+    playerPos.x = 0;
+    playerPos.z = 0;
   }
 
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
-
-  // Включаем управление для телефона
   initTouchControls();
 }
 
 // ============================================================
-// ОБНОВЛЕНИЕ ИГРОКА
+// ОБНОВЛЕНИЕ ИГРОКА (ФИКС 1)
 // ============================================================
 export function updatePlayer() {
+  // ФИКС 1: Правильное направление вперёд
   const forward = new THREE.Vector3(0, 0, -1);
   forward.applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -229,45 +233,54 @@ export function updatePlayer() {
   if (keys['a'] || keys['arrowleft']) moveX -= 1;
   if (keys['d'] || keys['arrowright']) moveX += 1;
 
-  // Телефон (джойстик)
+  // Телефон
   if (Math.abs(touchMove.x) > 2 || Math.abs(touchMove.y) > 2) {
     moveX += touchMove.x * 0.02;
     moveZ += touchMove.y * 0.02;
   }
 
   // Телефон (камера)
-  if (Math.abs(touchLook.y) > 2) {
+  if (Math.abs(touchLook.x) > 2 || Math.abs(touchLook.y) > 2) {
+    euler.y -= touchLook.x * 0.005;
     euler.x -= touchLook.y * 0.005;
     euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
     camera.rotation.x = euler.x;
+    camera.rotation.y = euler.y;
   }
 
+  const speed = 8;
   let moved = false;
+
   if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
     const len = Math.hypot(moveX, moveZ);
     moveX /= len;
     moveZ /= len;
 
-    const dx = (forward.x * moveZ + right.x * moveX) * speed;
-    const dz = (forward.z * moveZ + right.z * moveX) * speed;
+    // ФИКС 1: Правильный расчёт движения
+    const dx = (forward.x * moveZ + right.x * moveX) * speed * delta;
+    const dz = (forward.z * moveZ + right.z * moveX) * speed * delta;
 
     playerPos.x += dx;
     playerPos.z += dz;
     moved = true;
+
+    // ФИКС 1: Персонаж смотрит в сторону движения
     const angle = Math.atan2(moveX, moveZ);
     playerGroup.rotation.y = angle;
   }
 
   // Прыжок
+  const jumpForce = 4.5;
+  const gravity = -12;
   let jump = keys['space'] || keys['Space'] || jumpPressed;
   if (jump && isGrounded) {
-    velocityY = 0.2;
+    velocityY = jumpForce;
     isGrounded = false;
   }
 
   if (!isGrounded) {
-    velocityY -= 0.008;
-    playerPos.y += velocityY;
+    velocityY += gravity * delta;
+    playerPos.y += velocityY * delta;
     if (playerPos.y <= 0) {
       playerPos.y = 0;
       velocityY = 0;
@@ -287,7 +300,7 @@ export function updatePlayer() {
   camera.position.lerp(offset, 0.1);
   camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
 
-  // Отправка на сервер
+  // Отправка
   if (moved) {
     sendPosition(playerPos.x, playerPos.z, playerGroup.rotation.y);
   }
