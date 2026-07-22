@@ -209,26 +209,17 @@ document.addEventListener('mousemove', (e) => {
 });
 
 // ============================================================
-// 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ (ВЕРТИКАЛЬНОЕ)
+// 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ (ЧЕРЕЗ ЗОНЫ В HTML)
 // ============================================================
-// Зоны экрана:
-// - Центральная зона (весь экран, кроме правого края) — движение и поворот
-// - Правая зона (20% ширины) — камера вверх/вниз
-// - Кнопка прыжка — справа внизу
-
 const moveZone = document.createElement('div');
-moveZone.style.cssText = 'position:absolute;top:0;left:0;width:80%;height:100%;z-index:40;touch-action:none;';
+moveZone.id = 'move-zone';
+moveZone.style.cssText = 'position:absolute;top:0;left:0;width:75%;height:100%;z-index:40;touch-action:none;';
 document.body.appendChild(moveZone);
 
 const lookZone = document.createElement('div');
-lookZone.style.cssText = 'position:absolute;top:0;right:0;width:20%;height:100%;z-index:40;touch-action:none;';
+lookZone.id = 'look-zone';
+lookZone.style.cssText = 'position:absolute;top:0;right:0;width:25%;height:100%;z-index:40;touch-action:none;';
 document.body.appendChild(lookZone);
-
-// Убираем старые элементы управления, чтобы не мешали
-const oldJoystick = document.getElementById('joystick-area');
-const oldCamera = document.getElementById('camera-area');
-if (oldJoystick) oldJoystick.style.display = 'none';
-if (oldCamera) oldCamera.style.display = 'none';
 
 let touchMoveId = null;
 let touchLookId = null;
@@ -308,26 +299,9 @@ lookZone.addEventListener('touchcancel', () => {
   lookDelta = { x: 0, y: 0 };
 });
 
-// --- КНОПКА ПРЫЖКА (СПРАВА ВНИЗУ) ---
+// --- КНОПКА ПРЫЖКА ---
 const jumpBtn = document.getElementById('jump-btn');
 if (jumpBtn) {
-  jumpBtn.style.display = 'flex';
-  jumpBtn.style.width = '70px';
-  jumpBtn.style.height = '70px';
-  jumpBtn.style.bottom = '30px';
-  jumpBtn.style.right = '30px';
-  jumpBtn.style.borderRadius = '50%';
-  jumpBtn.style.background = 'rgba(255, 0, 127, 0.25)';
-  jumpBtn.style.border = '2px solid rgba(255, 0, 127, 0.5)';
-  jumpBtn.style.color = '#ff007f';
-  jumpBtn.style.fontSize = '24px';
-  jumpBtn.style.zIndex = '50';
-  jumpBtn.style.justifyContent = 'center';
-  jumpBtn.style.alignItems = 'center';
-  jumpBtn.style.touchAction = 'none';
-  jumpBtn.style.userSelect = 'none';
-  jumpBtn.style.fontFamily = 'monospace';
-
   jumpBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     jumpPressed = true;
@@ -489,15 +463,11 @@ function animate() {
   requestAnimationFrame(animate);
 
   // ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ =====
-  // Центральная зона: свайп вверх/вниз → движение вперёд/назад
-  // Свайп вправо/влево → поворот персонажа
-  const moveForward = -moveDelta.y * 0.02; // вверх → вперёд
-  const moveTurn = moveDelta.x * 0.02; // вправо → поворот вправо
+  const moveForward = -moveDelta.y * 0.02;
+  const moveTurn = moveDelta.x * 0.02;
+  const lookUp = lookDelta.y * 0.02;
 
-  // Правая зона: свайп вверх/вниз → камера вверх/вниз
-  const lookUp = lookDelta.y * 0.02; // вверх → камера вверх
-
-  // ===== ОБНОВЛЯЕМ КАМЕРУ (поворот + взгляд вверх/вниз) =====
+  // ===== ОБНОВЛЯЕМ КАМЕРУ =====
   euler.y += moveTurn;
   euler.x += lookUp;
   euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
@@ -505,7 +475,7 @@ function animate() {
   camera.rotation.x = euler.x;
   camera.rotation.y = euler.y;
 
-  // ===== ДВИЖЕНИЕ ВПЕРЁД/НАЗАД =====
+  // ===== ДВИЖЕНИЕ =====
   const forward = new THREE.Vector3(0, 0, -1);
   forward.applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -516,13 +486,11 @@ function animate() {
 
   let moveX = 0, moveZ = 0;
   
-  // Клавиатура
   if (keys['w'] || keys['arrowup']) moveZ += 1;
   if (keys['s'] || keys['arrowdown']) moveZ -= 1;
   if (keys['a'] || keys['arrowleft']) moveX -= 1;
   if (keys['d'] || keys['arrowright']) moveX += 1;
   
-  // Мобильный свайп (вперёд/назад)
   if (Math.abs(moveForward) > 0.05) {
     moveZ += moveForward;
   }
@@ -545,7 +513,6 @@ function animate() {
     playerGroup.rotation.y = angle;
   }
 
-  // Прыжок (клавиатура или мобильная кнопка)
   let jump = keys['space'] || keys['Space'] || jumpPressed;
   if (jump && isGrounded) {
     velocityY = 0.2;
