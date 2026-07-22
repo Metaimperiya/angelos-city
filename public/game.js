@@ -1,5 +1,5 @@
 // ============================================================
-// ВЕРТИКАЛЬНАЯ МОБИЛЬНАЯ ВЕРСИЯ (БЕЗ ПОВОРОТА ЭКРАНА)
+// ВЕРТИКАЛЬНАЯ МОБИЛЬНАЯ ВЕРСИЯ
 // ============================================================
 
 // ============================================================
@@ -37,16 +37,13 @@ document.body.prepend(renderer.domElement);
 // ============================================================
 const ambient = new THREE.AmbientLight(0x222244, 0.6);
 scene.add(ambient);
-
 const dirLight = new THREE.DirectionalLight(0x88ccff, 1.5);
 dirLight.position.set(10, 20, 10);
 dirLight.castShadow = true;
 scene.add(dirLight);
-
 const backLight = new THREE.DirectionalLight(0xff4488, 0.4);
 backLight.position.set(-5, 5, -10);
 scene.add(backLight);
-
 const bottomLight = new THREE.PointLight(0x00f3ff, 0.8, 20);
 bottomLight.position.set(0, -2, 0);
 scene.add(bottomLight);
@@ -209,15 +206,13 @@ document.addEventListener('mousemove', (e) => {
 });
 
 // ============================================================
-// 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ (ЧЕРЕЗ ЗОНЫ В HTML)
+// 9. МОБИЛЬНОЕ УПРАВЛЕНИЕ
 // ============================================================
 const moveZone = document.createElement('div');
-moveZone.id = 'move-zone';
 moveZone.style.cssText = 'position:absolute;top:0;left:0;width:75%;height:100%;z-index:40;touch-action:none;';
 document.body.appendChild(moveZone);
 
 const lookZone = document.createElement('div');
-lookZone.id = 'look-zone';
 lookZone.style.cssText = 'position:absolute;top:0;right:0;width:25%;height:100%;z-index:40;touch-action:none;';
 document.body.appendChild(lookZone);
 
@@ -229,7 +224,6 @@ let moveDelta = { x: 0, y: 0 };
 let lookDelta = { x: 0, y: 0 };
 let jumpPressed = false;
 
-// --- ЦЕНТРАЛЬНАЯ ЗОНА (ДВИЖЕНИЕ + ПОВОРОТ) ---
 moveZone.addEventListener('touchstart', (e) => {
   e.preventDefault();
   const touch = e.changedTouches[0];
@@ -265,7 +259,6 @@ moveZone.addEventListener('touchcancel', () => {
   moveDelta = { x: 0, y: 0 };
 });
 
-// --- ПРАВАЯ ЗОНА (КАМЕРА ВВЕРХ/ВНИЗ) ---
 lookZone.addEventListener('touchstart', (e) => {
   e.preventDefault();
   const touch = e.changedTouches[0];
@@ -299,7 +292,6 @@ lookZone.addEventListener('touchcancel', () => {
   lookDelta = { x: 0, y: 0 };
 });
 
-// --- КНОПКА ПРЫЖКА ---
 const jumpBtn = document.getElementById('jump-btn');
 if (jumpBtn) {
   jumpBtn.addEventListener('touchstart', (e) => {
@@ -462,12 +454,10 @@ let lastSentTime = 0;
 function animate() {
   requestAnimationFrame(animate);
 
-  // ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ =====
   const moveForward = -moveDelta.y * 0.02;
   const moveTurn = moveDelta.x * 0.02;
   const lookUp = lookDelta.y * 0.02;
 
-  // ===== ОБНОВЛЯЕМ КАМЕРУ =====
   euler.y += moveTurn;
   euler.x += lookUp;
   euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
@@ -475,7 +465,6 @@ function animate() {
   camera.rotation.x = euler.x;
   camera.rotation.y = euler.y;
 
-  // ===== ДВИЖЕНИЕ =====
   const forward = new THREE.Vector3(0, 0, -1);
   forward.applyQuaternion(camera.quaternion);
   forward.y = 0;
