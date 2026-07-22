@@ -8,7 +8,7 @@ import { teleportToShip } from '../Ship.js';
 import { PlayerInput } from './PlayerInput.js';
 import { PlayerController } from './PlayerController.js';
 import { PlayerCamera } from './PlayerCamera.js';
-import { sendPosition } from '../../network/socket.js';
+import { sendPosition } from '../../network/sync.js'; // ← ИЗМЕНЕНО
 
 export let playerPos = { x: 0, z: 0, y: 0 };
 let playerGroup;
