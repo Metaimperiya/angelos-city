@@ -22,6 +22,8 @@ wss.on('connection', (ws) => {
     name: 'Игрок_' + Math.random().toString(36).substr(2, 4)
   };
 
+  console.log(`🟢 Игрок ${id} подключился (${Object.keys(players).length} всего)`);
+
   ws.send(JSON.stringify({
     type: 'init',
     players: players,
@@ -60,10 +62,13 @@ wss.on('connection', (ws) => {
           name: players[id]?.name || 'Игрок'
         }, ws);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Ошибка обработки сообщения:', e);
+    }
   });
 
   ws.on('close', () => {
+    console.log(`🔴 Игрок ${id} отключился`);
     delete players[id];
     broadcast({ type: 'playerLeave', id: id });
   });
