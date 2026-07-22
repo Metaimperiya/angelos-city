@@ -1,9 +1,9 @@
 // ============================================================
-// ВЕРТИКАЛЬНАЯ МОБИЛЬНАЯ ВЕРСИЯ
+// ВЕРТИКАЛЬНАЯ МОБИЛЬНАЯ ВЕРСИЯ + МЫШЬ
 // ============================================================
 
 // ============================================================
-// 1. ПОДКЛЮЧЕНИЕ К СЕРВЕРУ (ИСПРАВЛЕНО)
+// 1. ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
 // ============================================================
 const socket = new WebSocket(`wss://${window.location.hostname}`);
 let myId = '';
@@ -186,14 +186,21 @@ window.addEventListener('keyup', (e) => {
   keys[e.code] = false;
 });
 
+// МЫШЬ - клик для захвата + движение
 let isPointerLocked = false;
+
+// Захват мыши по клику на канвас
 renderer.domElement.addEventListener('click', () => {
   renderer.domElement.requestPointerLock();
 });
+
+// Следим за состоянием блокировки
 document.addEventListener('pointerlockchange', () => {
   isPointerLocked = document.pointerLockElement === renderer.domElement;
+  // Если мышка отжата (ESC) — ничего не делаем, просто ждём нового клика
 });
 
+// Движение мыши (только когда заблокирована)
 let euler = { x: 0, y: 0 };
 document.addEventListener('mousemove', (e) => {
   if (!isPointerLocked) return;
