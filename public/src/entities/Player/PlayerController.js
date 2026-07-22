@@ -1,10 +1,10 @@
 // ============================================================
-// ФИЗИКА И ДВИЖЕНИЕ (РАБОЧИЙ ЭТАЛОН С RAYCASTING)
+// ФИЗИКА И ДВИЖЕНИЕ (БЕЗ ПРОВАЛОВ СКВОЗЬ ТЕКСТУРЫ)
 // ============================================================
 
 import * as THREE from 'three';
 import { PlayerCamera } from './PlayerCamera.js';
-import { mainShip, shipSpawnPoint } from '../Ship.js';
+import { mainShip } from '../Ship.js';
 
 const downRaycaster = new THREE.Raycaster();
 const forwardRaycaster = new THREE.Raycaster();
@@ -73,7 +73,7 @@ export const PlayerController = {
       this.group.rotation.y = this.rotation;
     }
 
-    // Ищем палубу под ногами
+    // 🌊 ИЩЕМ ПАЛУБЫ/ПОЛ (Сканируем до 100 метров вниз)
     let floorY = 0; // Вода по умолчанию
     if (mainShip) {
       rayOrigin.set(this.pos.x, this.pos.y + 3, this.pos.z);
@@ -82,7 +82,8 @@ export const PlayerController = {
 
       if (hits.length > 0) {
         const hit = hits[0];
-        if (hit.point.y >= -1 && (this.pos.y + 3 - hit.point.y) <= 20) {
+        // Увеличили дистанцию проверки с 20 до 100 метров!
+        if (hit.point.y >= -1 && (this.pos.y + 3 - hit.point.y) <= 100) {
           floorY = hit.point.y;
         }
       }
