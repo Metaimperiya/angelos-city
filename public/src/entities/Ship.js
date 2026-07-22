@@ -59,7 +59,6 @@ export function loadShips() {
 
           if (index === 0) {
             mainShip = ship;
-            // Платформа для спавна
             const platformGeo = new THREE.BoxGeometry(3, 0.2, 2);
             const platformMat = new THREE.MeshPhongMaterial({
               color: 0x00ff88,
