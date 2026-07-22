@@ -1,10 +1,11 @@
 // ============================================================
-// ИГРОК + УПРАВЛЕНИЕ (МЫШЬ, WASD, ПРЫЖОК)
+// ИГРОК + УПРАВЛЕНИЕ (МЫШЬ, WASD, ПРЫЖОК, ТЕЛЕФОН)
 // ============================================================
 
 import * as THREE from 'three';
 import { scene, camera, renderer } from '../core/scene.js';
 import { teleportToShip } from './Ship.js';
+import { socket, sendPosition } from '../network/socket.js';
 
 export let playerPos = { x: 0, z: 0, y: 0 };
 let playerGroup;
@@ -12,7 +13,9 @@ let velocityY = 0;
 let isGrounded = true;
 const speed = 0.15;
 
-// Клавиатура
+// ============================================================
+// КЛАВИАТУРА
+// ============================================================
 const keys = {};
 window.addEventListener('keydown', (e) => {
   keys[e.key.toLowerCase()] = true;
@@ -23,12 +26,13 @@ window.addEventListener('keyup', (e) => {
   keys[e.code] = false;
 });
 
-// Мышь
+// ============================================================
+// МЫШЬ
+// ============================================================
 let isPointerLocked = false;
 let euler = { x: 0, y: 0 };
 
 export function initControls() {
-  // Захват мыши по клику
   renderer.domElement.addEventListener('click', () => {
     renderer.domElement.requestPointerLock();
   });
@@ -46,6 +50,123 @@ export function initControls() {
   });
 }
 
+// ============================================================
+// ТЕЛЕФОН: ДЖОЙСТИК (ЦЕНТР) + КАМЕРА (ПРАВЫЙ КРАЙ)
+// ============================================================
+let touchMove = { x: 0, y: 0 };
+let touchLook = { x: 0, y: 0 };
+let jumpPressed = false;
+
+export function initTouchControls() {
+  // Зона движения (75% экрана)
+  const moveZone = document.createElement('div');
+  moveZone.style.cssText = 'position:absolute;top:0;left:0;width:75%;height:100%;z-index:40;touch-action:none;';
+  document.body.appendChild(moveZone);
+
+  // Зона камеры (25% экрана)
+  const lookZone = document.createElement('div');
+  lookZone.style.cssText = 'position:absolute;top:0;right:0;width:25%;height:100%;z-index:40;touch-action:none;';
+  document.body.appendChild(lookZone);
+
+  let touchMoveId = null;
+  let touchLookId = null;
+  let lastMovePos = { x: 0, y: 0 };
+  let lastLookPos = { x: 0, y: 0 };
+
+  moveZone.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    touchMoveId = touch.identifier;
+    lastMovePos = { x: touch.clientX, y: touch.clientY };
+    touchMove = { x: 0, y: 0 };
+  });
+
+  moveZone.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === touchMoveId) {
+        const dx = touch.clientX - lastMovePos.x;
+        const dy = touch.clientY - lastMovePos.y;
+        touchMove.x = dx;
+        touchMove.y = dy;
+        lastMovePos = { x: touch.clientX, y: touch.clientY };
+      }
+    }
+  });
+
+  moveZone.addEventListener('touchend', (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === touchMoveId) {
+        touchMoveId = null;
+        touchMove = { x: 0, y: 0 };
+      }
+    }
+  });
+
+  moveZone.addEventListener('touchcancel', () => {
+    touchMoveId = null;
+    touchMove = { x: 0, y: 0 };
+  });
+
+  lookZone.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    touchLookId = touch.identifier;
+    lastLookPos = { x: touch.clientX, y: touch.clientY };
+    touchLook = { x: 0, y: 0 };
+  });
+
+  lookZone.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === touchLookId) {
+        const dy = touch.clientY - lastLookPos.y;
+        touchLook.y = dy;
+        lastLookPos = { x: touch.clientX, y: touch.clientY };
+      }
+    }
+  });
+
+  lookZone.addEventListener('touchend', (e) => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === touchLookId) {
+        touchLookId = null;
+        touchLook = { x: 0, y: 0 };
+      }
+    }
+  });
+
+  lookZone.addEventListener('touchcancel', () => {
+    touchLookId = null;
+    touchLook = { x: 0, y: 0 };
+  });
+
+  // Кнопка прыжка
+  const jumpBtn = document.getElementById('jump-btn');
+  if (jumpBtn) {
+    jumpBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      jumpPressed = true;
+      jumpBtn.style.transform = 'scale(0.92)';
+      jumpBtn.style.background = 'rgba(255, 0, 127, 0.4)';
+    });
+    jumpBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      jumpPressed = false;
+      jumpBtn.style.transform = 'scale(1)';
+      jumpBtn.style.background = 'rgba(255, 0, 127, 0.25)';
+    });
+    jumpBtn.addEventListener('touchcancel', () => {
+      jumpPressed = false;
+      jumpBtn.style.transform = 'scale(1)';
+      jumpBtn.style.background = 'rgba(255, 0, 127, 0.25)';
+    });
+  }
+}
+
+// ============================================================
+// СОЗДАНИЕ ИГРОКА
+// ============================================================
 export function createPlayer() {
   playerGroup = new THREE.Group();
   scene.add(playerGroup);
@@ -83,10 +204,15 @@ export function createPlayer() {
   }
 
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
+
+  // Включаем управление для телефона
+  initTouchControls();
 }
 
+// ============================================================
+// ОБНОВЛЕНИЕ ИГРОКА
+// ============================================================
 export function updatePlayer() {
-  // Направление
   const forward = new THREE.Vector3(0, 0, -1);
   forward.applyQuaternion(camera.quaternion);
   forward.y = 0;
@@ -96,11 +222,27 @@ export function updatePlayer() {
   right.crossVectors(forward, camera.up).normalize();
 
   let moveX = 0, moveZ = 0;
+
+  // Клавиатура
   if (keys['w'] || keys['arrowup']) moveZ += 1;
   if (keys['s'] || keys['arrowdown']) moveZ -= 1;
   if (keys['a'] || keys['arrowleft']) moveX -= 1;
   if (keys['d'] || keys['arrowright']) moveX += 1;
 
+  // Телефон (джойстик)
+  if (Math.abs(touchMove.x) > 2 || Math.abs(touchMove.y) > 2) {
+    moveX += touchMove.x * 0.02;
+    moveZ += touchMove.y * 0.02;
+  }
+
+  // Телефон (камера)
+  if (Math.abs(touchLook.y) > 2) {
+    euler.x -= touchLook.y * 0.005;
+    euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
+    camera.rotation.x = euler.x;
+  }
+
+  let moved = false;
   if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
     const len = Math.hypot(moveX, moveZ);
     moveX /= len;
@@ -111,12 +253,13 @@ export function updatePlayer() {
 
     playerPos.x += dx;
     playerPos.z += dz;
+    moved = true;
     const angle = Math.atan2(moveX, moveZ);
     playerGroup.rotation.y = angle;
   }
 
   // Прыжок
-  let jump = keys['space'] || keys['Space'];
+  let jump = keys['space'] || keys['Space'] || jumpPressed;
   if (jump && isGrounded) {
     velocityY = 0.2;
     isGrounded = false;
@@ -143,6 +286,11 @@ export function updatePlayer() {
 
   camera.position.lerp(offset, 0.1);
   camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
+
+  // Отправка на сервер
+  if (moved) {
+    sendPosition(playerPos.x, playerPos.z, playerGroup.rotation.y);
+  }
 }
 
 export function getPlayerPos() {
