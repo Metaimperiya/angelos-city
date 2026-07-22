@@ -1,13 +1,16 @@
 // ============================================================
-// ВВОД (КЛАВИАТУРА + МЫШЬ + ТЕЛЕФОН)
+// ВВОД (КЛАВИАТУРА, МЫШЬ, ТЕЛЕФОН)
 // ============================================================
 
 import { renderer } from '../../core/scene.js';
 
 export const PlayerInput = {
   keys: {},
-  mouse: { x: 0, y: 0, locked: false },
-  touch: { move: { x: 0, y: 0 }, look: { x: 0, y: 0 } },
+  mouseX: 0,
+  mouseY: 0,
+  mouseLocked: false,
+  touchMove: { x: 0, y: 0 },
+  touchLook: { x: 0, y: 0 },
   jump: false,
 
   init() {
@@ -26,19 +29,19 @@ export const PlayerInput = {
       renderer.domElement.requestPointerLock();
     });
     document.addEventListener('pointerlockchange', () => {
-      this.mouse.locked = document.pointerLockElement === renderer.domElement;
+      this.mouseLocked = document.pointerLockElement === renderer.domElement;
     });
     document.addEventListener('mousemove', (e) => {
-      if (!this.mouse.locked) return;
-      this.mouse.x += e.movementX;
-      this.mouse.y += e.movementY;
+      if (!this.mouseLocked) return;
+      this.mouseX += e.movementX;
+      this.mouseY += e.movementY;
     });
 
     // Телефон
-    this.initTouchControls();
+    this.initTouch();
   },
 
-  initTouchControls() {
+  initTouch() {
     const moveZone = document.createElement('div');
     moveZone.style.cssText = 'position:absolute;top:0;left:0;width:75%;height:100%;z-index:40;touch-action:none;';
     document.body.appendChild(moveZone);
@@ -48,22 +51,23 @@ export const PlayerInput = {
     document.body.appendChild(lookZone);
 
     let moveId = null, lookId = null;
-    let lastMove = { x: 0, y: 0 }, lastLook = { x: 0, y: 0 };
+    let lastMove = { x: 0, y: 0 };
+    let lastLook = { x: 0, y: 0 };
 
     moveZone.addEventListener('touchstart', (e) => {
       e.preventDefault();
       const t = e.changedTouches[0];
       moveId = t.identifier;
       lastMove = { x: t.clientX, y: t.clientY };
-      this.touch.move = { x: 0, y: 0 };
+      this.touchMove = { x: 0, y: 0 };
     });
 
     moveZone.addEventListener('touchmove', (e) => {
       e.preventDefault();
       for (const t of e.changedTouches) {
         if (t.identifier === moveId) {
-          this.touch.move.x = t.clientX - lastMove.x;
-          this.touch.move.y = t.clientY - lastMove.y;
+          this.touchMove.x = t.clientX - lastMove.x;
+          this.touchMove.y = t.clientY - lastMove.y;
           lastMove = { x: t.clientX, y: t.clientY };
         }
       }
@@ -73,14 +77,14 @@ export const PlayerInput = {
       for (const t of e.changedTouches) {
         if (t.identifier === moveId) {
           moveId = null;
-          this.touch.move = { x: 0, y: 0 };
+          this.touchMove = { x: 0, y: 0 };
         }
       }
     });
 
     moveZone.addEventListener('touchcancel', () => {
       moveId = null;
-      this.touch.move = { x: 0, y: 0 };
+      this.touchMove = { x: 0, y: 0 };
     });
 
     lookZone.addEventListener('touchstart', (e) => {
@@ -88,15 +92,15 @@ export const PlayerInput = {
       const t = e.changedTouches[0];
       lookId = t.identifier;
       lastLook = { x: t.clientX, y: t.clientY };
-      this.touch.look = { x: 0, y: 0 };
+      this.touchLook = { x: 0, y: 0 };
     });
 
     lookZone.addEventListener('touchmove', (e) => {
       e.preventDefault();
       for (const t of e.changedTouches) {
         if (t.identifier === lookId) {
-          this.touch.look.x += t.clientX - lastLook.x;
-          this.touch.look.y += t.clientY - lastLook.y;
+          this.touchLook.x += t.clientX - lastLook.x;
+          this.touchLook.y += t.clientY - lastLook.y;
           lastLook = { x: t.clientX, y: t.clientY };
         }
       }
@@ -106,14 +110,14 @@ export const PlayerInput = {
       for (const t of e.changedTouches) {
         if (t.identifier === lookId) {
           lookId = null;
-          this.touch.look = { x: 0, y: 0 };
+          this.touchLook = { x: 0, y: 0 };
         }
       }
     });
 
     lookZone.addEventListener('touchcancel', () => {
       lookId = null;
-      this.touch.look = { x: 0, y: 0 };
+      this.touchLook = { x: 0, y: 0 };
     });
 
     const jumpBtn = document.getElementById('jump-btn');
@@ -144,24 +148,23 @@ export const PlayerInput = {
     const moveZ = (this.keys['a'] || this.keys['arrowleft']) ? 1 : 0
                - (this.keys['d'] || this.keys['arrowright']) ? 1 : 0;
 
-    // Добавляем телефон
-    const tx = this.touch.move.x * 0.02;
-    const tz = this.touch.move.y * 0.02;
+    const tx = this.touchMove.x * 0.02;
+    const tz = this.touchMove.y * 0.02;
 
     return {
       moveX: moveX + tx,
       moveZ: moveZ + tz,
-      mouseX: this.mouse.x,
-      mouseY: this.mouse.y,
-      touchLookX: this.touch.look.x,
-      touchLookY: this.touch.look.y,
+      mouseX: this.mouseX,
+      mouseY: this.mouseY,
+      touchLookX: this.touchLook.x,
+      touchLookY: this.touchLook.y,
       jump: this.keys['space'] || this.keys['Space'] || this.jump,
       moved: Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05 || Math.abs(tx) > 0.05 || Math.abs(tz) > 0.05
     };
   },
 
   resetMouse() {
-    this.mouse.x = 0;
-    this.mouse.y = 0;
+    this.mouseX = 0;
+    this.mouseY = 0;
   }
 };
