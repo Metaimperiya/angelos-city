@@ -24,13 +24,19 @@ export const PlayerInput = {
       this.keys[e.code] = false;
     });
 
-    // МЫШЬ — ЭТА ЧАСТЬ ОТВЕЧАЕТ ЗА ЗАХВАТ И ДВИЖЕНИЕ
-    renderer.domElement.addEventListener('click', () => {
-      renderer.domElement.requestPointerLock();
+    // МЫШЬ — клик вешаем на document, чтобы тач-зоны не блокировали захват
+    document.addEventListener('click', (e) => {
+      // Игнорируем клики по кнопкам UI, если они есть
+      if (e.target.tagName === 'BUTTON') return;
+      if (!this.mouseLocked && renderer?.domElement) {
+        renderer.domElement.requestPointerLock();
+      }
     });
+
     document.addEventListener('pointerlockchange', () => {
       this.mouseLocked = document.pointerLockElement === renderer.domElement;
     });
+
     document.addEventListener('mousemove', (e) => {
       if (!this.mouseLocked) return;
       this.mouseX += e.movementX;
@@ -43,11 +49,11 @@ export const PlayerInput = {
 
   initTouch() {
     const moveZone = document.createElement('div');
-    moveZone.style.cssText = 'position:absolute;top:0;left:0;width:75%;height:100%;z-index:40;touch-action:none;';
+    moveZone.style.cssText = 'position:absolute;top:0;left:0;width:50%;height:100%;z-index:40;touch-action:none;';
     document.body.appendChild(moveZone);
 
     const lookZone = document.createElement('div');
-    lookZone.style.cssText = 'position:absolute;top:0;right:0;width:25%;height:100%;z-index:40;touch-action:none;';
+    lookZone.style.cssText = 'position:absolute;top:0;right:0;width:50%;height:100%;z-index:40;touch-action:none;';
     document.body.appendChild(lookZone);
 
     let moveId = null, lookId = null;
@@ -73,19 +79,16 @@ export const PlayerInput = {
       }
     });
 
-    moveZone.addEventListener('touchend', (e) => {
+    const resetMove = (e) => {
       for (const t of e.changedTouches) {
         if (t.identifier === moveId) {
           moveId = null;
           this.touchMove = { x: 0, y: 0 };
         }
       }
-    });
-
-    moveZone.addEventListener('touchcancel', () => {
-      moveId = null;
-      this.touchMove = { x: 0, y: 0 };
-    });
+    };
+    moveZone.addEventListener('touchend', resetMove);
+    moveZone.addEventListener('touchcancel', () => { moveId = null; this.touchMove = { x: 0, y: 0 }; });
 
     lookZone.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -106,50 +109,43 @@ export const PlayerInput = {
       }
     });
 
-    lookZone.addEventListener('touchend', (e) => {
+    const resetLook = (e) => {
       for (const t of e.changedTouches) {
         if (t.identifier === lookId) {
           lookId = null;
           this.touchLook = { x: 0, y: 0 };
         }
       }
-    });
-
-    lookZone.addEventListener('touchcancel', () => {
-      lookId = null;
-      this.touchLook = { x: 0, y: 0 };
-    });
+    };
+    lookZone.addEventListener('touchend', resetLook);
+    lookZone.addEventListener('touchcancel', () => { lookId = null; this.touchLook = { x: 0, y: 0 }; });
 
     const jumpBtn = document.getElementById('jump-btn');
     if (jumpBtn) {
       jumpBtn.addEventListener('touchstart', (e) => {
         e.preventDefault();
         this.jump = true;
-        jumpBtn.style.transform = 'scale(0.92)';
-        jumpBtn.style.background = 'rgba(255, 0, 127, 0.4)';
       });
       jumpBtn.addEventListener('touchend', (e) => {
         e.preventDefault();
         this.jump = false;
-        jumpBtn.style.transform = 'scale(1)';
-        jumpBtn.style.background = 'rgba(255, 0, 127, 0.25)';
-      });
-      jumpBtn.addEventListener('touchcancel', () => {
-        this.jump = false;
-        jumpBtn.style.transform = 'scale(1)';
-        jumpBtn.style.background = 'rgba(255, 0, 127, 0.25)';
       });
     }
   },
 
   getInput() {
-    const moveX = (this.keys['w'] || this.keys['arrowup']) ? 1 : 0
-               - (this.keys['s'] || this.keys['arrowdown']) ? 1 : 0;
-    const moveZ = (this.keys['a'] || this.keys['arrowleft']) ? 1 : 0
-               - (this.keys['d'] || this.keys['arrowright']) ? 1 : 0;
+    // Вперед / Назад (W / S) -> moveZ (+1 вперед, -1 назад)
+    let moveZ = 0;
+    if (this.keys['w'] || this.keys['keyw'] || this.keys['arrowup']) moveZ += 1;
+    if (this.keys['s'] || this.keys['keys'] || this.keys['arrowdown']) moveZ -= 1;
+
+    // Влево / Вправо (A / D) -> moveX (-1 влево, +1 вправо)
+    let moveX = 0;
+    if (this.keys['d'] || this.keys['keyd'] || this.keys['arrowright']) moveX += 1;
+    if (this.keys['a'] || this.keys['keya'] || this.keys['arrowleft']) moveX -= 1;
 
     const tx = this.touchMove.x * 0.02;
-    const tz = this.touchMove.y * 0.02;
+    const tz = -this.touchMove.y * 0.02;
 
     const result = {
       moveX: moveX + tx,
@@ -158,18 +154,16 @@ export const PlayerInput = {
       mouseY: this.mouseY,
       touchLookX: this.touchLook.x,
       touchLookY: this.touchLook.y,
-      jump: this.keys['space'] || this.keys['Space'] || this.jump,
-      moved: Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05 || Math.abs(tx) > 0.05 || Math.abs(tz) > 0.05
+      jump: this.keys['space'] || this.keys['Space'] || this.jump
     };
 
-    // ⬇️ ЭТА СТРОЧКА СБРАСЫВАЕТ НАКОПЛЕНИЕ МЫШИ, ЧТОБЫ ОНА НЕ УЛЕТАЛА
     this.resetMouse();
-
     return result;
   },
 
   resetMouse() {
     this.mouseX = 0;
     this.mouseY = 0;
+    this.touchLook = { x: 0, y: 0 };
   }
 };
