@@ -3,6 +3,7 @@
 // ============================================================
 
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
 import { scene } from '../core/scene.js';
 
 export let ships = [];
@@ -16,7 +17,7 @@ const shipConfigs = [
 
 export function loadShips() {
   return new Promise((resolve) => {
-    const loader = new THREE.GLTFLoader();
+    const loader = new GLTFLoader();
     let loaded = 0;
 
     shipConfigs.forEach((cfg, index) => {
@@ -101,7 +102,7 @@ export function getMainShip() {
 }
 
 export function teleportToMainShip() {
-  if (!mainShip) return;
+  if (!mainShip) return null;
   const worldPos = new THREE.Vector3(0, 1.5, 0);
   mainShip.localToWorld(worldPos);
   return worldPos;
