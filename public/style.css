@@ -144,37 +144,12 @@ body {
 }
 #chat-toggle:hover { background: #00f3ff; color: #000; }
 
-/* ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ (ЗОНЫ) ===== */
-#move-zone {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 75%;
-  height: 100%;
-  z-index: 40;
-  touch-action: none;
-}
-
-#look-zone {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 25%;
-  height: 100%;
-  z-index: 40;
-  touch-action: none;
-}
-
 /* ===== ТОЛЬКО ДЛЯ МОБИЛЫ ===== */
 @media (pointer: coarse) {
   #jump-btn { display: flex; }
-  #move-zone { display: block; }
-  #look-zone { display: block; }
 }
 
 /* ===== ДЛЯ КОМПА ===== */
 @media (pointer: fine) {
   #jump-btn { display: none; }
-  #move-zone { display: none; }
-  #look-zone { display: none; }
 }
