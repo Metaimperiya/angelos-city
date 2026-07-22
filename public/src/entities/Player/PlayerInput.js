@@ -24,7 +24,7 @@ export const PlayerInput = {
       this.keys[e.code] = false;
     });
 
-    // Мышь
+    // МЫШЬ — ЭТА ЧАСТЬ ОТВЕЧАЕТ ЗА ЗАХВАТ И ДВИЖЕНИЕ
     renderer.domElement.addEventListener('click', () => {
       renderer.domElement.requestPointerLock();
     });
