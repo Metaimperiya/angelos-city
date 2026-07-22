@@ -1,73 +1,77 @@
 // ============================================================
-// ИГРОК (ЭКСПОРТ, ИНИЦИАЛИЗАЦИЯ И СИНХРОНИЗАЦИЯ C КАМЕРОЙ)
+// УНИВЕРСАЛЬНЫЙ МОДУЛЬ ВВОДА (Клавиатура + Мобильный тач)
 // ============================================================
 
-import * as THREE from 'three';
-import { scene, camera } from '../../core/scene.js';
-import { PlayerController } from './PlayerController.js';
-import { PlayerCamera } from './PlayerCamera.js';
-import { getInput, initControls as initInputControls } from './PlayerInput.js';
-import { sendPosition } from '../../network/sync.js';
+const inputState = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  jump: false,
+  run: false
+};
 
-export let playerGroup = null;
-export let playerPos = { x: 0, y: 15, z: -15 };
-let delta = 0.016;
-
-let prevPos = { x: 0, y: 0, z: 0 };
-const EPSILON = 0.001;
-
-export function setDelta(d) {
-  delta = d;
-}
-
-export function resetSyncPosition() {
-  prevPos.x = playerPos.x;
-  prevPos.y = playerPos.y;
-  prevPos.z = playerPos.z;
-}
-
-export function createPlayer() {
-  playerGroup = new THREE.Group();
-
-  const geometry = new THREE.BoxGeometry(1, 2, 1);
-  const material = new THREE.MeshLambertMaterial({ color: 0x00ff88 });
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.y = 1;
-  mesh.castShadow = true;
-
-  playerGroup.add(mesh);
-  playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
-
-  scene.add(playerGroup);
-
-  PlayerController.init(playerGroup, playerPos);
-
-  // Сброс синхронизации после создания
-  resetSyncPosition();
+export function getInput() {
+  return inputState;
 }
 
 export function initControls() {
-  initInputControls();
-  PlayerCamera.init(camera);
-}
+  // Обработка клавиатуры (layout-agnostic через e.code)
+  window.addEventListener('keydown', (e) => {
+    switch (e.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        inputState.forward = true;
+        break;
+      case 'KeyS':
+      case 'ArrowDown':
+        inputState.backward = true;
+        break;
+      case 'KeyA':
+      case 'ArrowLeft':
+        inputState.left = true;
+        break;
+      case 'KeyD':
+      case 'ArrowRight':
+        inputState.right = true;
+        break;
+      case 'Space':
+        inputState.jump = true;
+        break;
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        inputState.run = true;
+        break;
+    }
+  });
 
-export function updatePlayer() {
-  if (!playerGroup) return;
+  window.addEventListener('keyup', (e) => {
+    switch (e.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        inputState.forward = false;
+        break;
+      case 'KeyS':
+      case 'ArrowDown':
+        inputState.backward = false;
+        break;
+      case 'KeyA':
+      case 'ArrowLeft':
+        inputState.left = false;
+        break;
+      case 'KeyD':
+      case 'ArrowRight':
+        inputState.right = false;
+        break;
+      case 'Space':
+        inputState.jump = false;
+        break;
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        inputState.run = false;
+        break;
+    }
+  });
 
-  const input = getInput();
-  PlayerController.update(input, delta);
-  PlayerCamera.update(playerPos, input);
-
-  const hasMoved =
-    Math.abs(playerPos.x - prevPos.x) > EPSILON ||
-    Math.abs(playerPos.y - prevPos.y) > EPSILON ||
-    Math.abs(playerPos.z - prevPos.z) > EPSILON;
-
-  if (hasMoved) {
-    sendPosition(playerPos.x, playerPos.y, playerPos.z, PlayerController.getRotation());
-
-    prevPos.x = playerPos.x;
-    prevPos.y = playerPos.y;
-    prevPos.z = playerPos.z;
-  }
+  console.log('✅ Модуль ввода (PlayerInput) успешно инициализирован.');
 }
