@@ -3,7 +3,7 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { camera } from '../../core/scene.js';
+import { PlayerCamera } from './PlayerCamera.js';
 
 export const PlayerController = {
   group: null,
@@ -18,43 +18,41 @@ export const PlayerController = {
   },
 
   update(input, delta) {
-    // Получаем направление камеры
-    const forward = new THREE.Vector3(0, 0, -1);
-    forward.applyQuaternion(camera.quaternion);
-    forward.y = 0;
-    forward.normalize();
-
-    const right = new THREE.Vector3();
-    right.crossVectors(forward, camera.up).normalize();
-
-    // Входные данные
-    let moveX = input.moveX; // A/D или влево/вправо
-    let moveZ = input.moveZ; // W/S или вперёд/назад
+    let moveX = input.moveX; // A (-1) / D (+1)
+    let moveZ = input.moveZ; // S (-1) / W (+1)
 
     const speed = 8;
     let moved = false;
 
     if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
+      // Нормализуем ввод, чтобы по диагонали не бегать быстрее
       const len = Math.hypot(moveX, moveZ);
-      moveX /= len;
-      moveZ /= len;
+      const normX = moveX / len;
+      const normZ = moveZ / len;
 
-      // Движение относительно камеры
-      const dx = (forward.x * moveZ + right.x * moveX) * speed * delta;
-      const dz = (forward.z * moveZ + right.z * moveX) * speed * delta;
+      // Угол взгляда камеры по горизонтали
+      const yaw = PlayerCamera.euler.y;
+
+      // Считаем направление относительно угла камеры
+      // normZ > 0 (W) бежит вперед (-sin, -cos)
+      const sin = Math.sin(yaw);
+      const cos = Math.cos(yaw);
+
+      const dx = (-normZ * sin + normX * cos) * speed * delta;
+      const dz = (-normZ * cos - normX * sin) * speed * delta;
 
       this.pos.x += dx;
       this.pos.z += dz;
       moved = true;
 
-      // Поворот персонажа в сторону движения
-      this.rotation = Math.atan2(moveX, moveZ);
+      // Разворачиваем 3D-модельку игрока по направлению его хода
+      this.rotation = Math.atan2(-dx, -dz);
       this.group.rotation.y = this.rotation;
     }
 
     // Прыжок и гравитация
-    const jumpForce = 4.5;
-    const gravity = -12;
+    const jumpForce = 5;
+    const gravity = -15;
 
     if (input.jump && this.isGrounded) {
       this.velocityY = jumpForce;
@@ -64,6 +62,7 @@ export const PlayerController = {
     if (!this.isGrounded) {
       this.velocityY += gravity * delta;
       this.pos.y += this.velocityY * delta;
+
       if (this.pos.y <= 0) {
         this.pos.y = 0;
         this.velocityY = 0;
