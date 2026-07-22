@@ -1,16 +1,20 @@
 // ============================================================
-// ИГРОК
+// ИГРОК (Управление + Камера)
 // ============================================================
 
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 import { scene, camera } from '../core/scene.js';
-import { teleportToMainShip } from './Ship.js';
+import { sendMove, remoteMeshes } from '../network/socket.js';
 
-export let playerPos = { x: 0, z: 0, y: 0 };
-let playerGroup;
-let velocityY = 0;
-let isGrounded = true;
+export let playerPos = { x: 0, y: 0, z: 0 };
+export let playerGroup;
+
 const speed = 0.15;
+const keys = {};
+
+// Настройки камеры
+let cameraRotation = { x: 0, y: 0 };
+const mouseSensitivity = 0.002;
 
 export function createPlayer() {
   playerGroup = new THREE.Group();
@@ -41,21 +45,69 @@ export function createPlayer() {
     playerGroup.add(pupil);
   }
 
-  // Телепорт на главный корабль
-  const spawn = teleportToMainShip();
-  if (spawn) {
-    playerPos.x = spawn.x;
-    playerPos.z = spawn.z;
+  // Слушатели клавиш
+  window.addEventListener('keydown', (e) => { keys[e.code] = true; });
+  window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+  // Включение за хвата мыши для вращения камеры
+  document.body.addEventListener('click', () => {
+    if (document.pointerLockElement !== document.body) {
+      document.body.requestPointerLock();
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement === document.body) {
+      cameraRotation.y -= e.movementX * mouseSensitivity;
+      cameraRotation.x -= e.movementY * mouseSensitivity;
+      cameraRotation.x = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, cameraRotation.x));
+    }
+  });
+}
+
+export function updatePlayer() {
+  if (!playerGroup) return;
+
+  let moveX = 0;
+  let moveZ = 0;
+
+  if (keys['KeyW'] || keys['ArrowUp']) moveZ -= 1;
+  if (keys['KeyS'] || keys['ArrowDown']) moveZ += 1;
+  if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
+  if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+
+  if (moveX !== 0 || moveZ !== 0) {
+    // Движение относительно поворота камеры
+    const dir = new THREE.Vector3(moveX, 0, moveZ).normalize();
+    dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraRotation.y);
+
+    playerGroup.position.x += dir.x * speed;
+    playerGroup.position.z += dir.z * speed;
+    playerGroup.rotation.y = cameraRotation.y;
+
+    playerPos.x = playerGroup.position.x;
+    playerPos.z = playerGroup.position.z;
+
+    // Отправляем движения на сервер
+    sendMove(playerPos.x, playerPos.z, playerGroup.rotation.y);
   }
 
-  playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
+  // Камера следит за игроком
+  const cameraOffset = new THREE.Vector3(0, 3, 7);
+  cameraOffset.applyAxisAngle(new THREE.Vector3(1, 0, 0), cameraRotation.x);
+  cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraRotation.y);
+
+  camera.position.copy(playerGroup.position).add(cameraOffset);
+  camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
 }
 
-export function updatePlayer(keys, moveDelta, jumpPressed, euler) {
-  // Здесь будет логика движения (пока заглушка)
-  // Мы её перенесём из game.js позже
-}
-
-export function getPlayerPos() {
-  return playerPos;
+// Вспомогательная функция для спавна ДРУГИХ игроков
+export function createRemotePlayerMesh(color = 0xff0055) {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshPhongMaterial({ color });
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.6), mat);
+  mesh.position.y = 0.7;
+  group.add(mesh);
+  scene.add(group);
+  return group;
 }
