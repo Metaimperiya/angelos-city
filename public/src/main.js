@@ -12,10 +12,6 @@ import { initSync } from './network/sync.js';
 import { initChat } from './ui/chat.js';
 import { updateHUD } from './ui/hud.js';
 
-// ============================================================
-// ИНИЦИАЛИЗАЦИЯ
-// ============================================================
-
 console.log('🚀 Запуск Angelos City...');
 
 initScene();
@@ -24,15 +20,11 @@ await loadShip();
 initControls();
 createPlayer();
 initSocket();
-initSync(socket); // ← ПЕРЕДАЁМ СОКЕТ В СИНХРОНИЗАЦИЮ
+initSync(socket);
 initChat();
 updateHUD(1);
 
 console.log('✅ Все системы инициализированы');
-
-// ============================================================
-// ГЛАВНЫЙ ЦИКЛ
-// ============================================================
 
 const clock = new THREE.Clock();
 
@@ -40,16 +32,22 @@ function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.05);
   setDelta(delta);
-  updatePlayer();
-  renderer.render(scene, camera);
+
+  try {
+    updatePlayer();
+  } catch (e) {
+    console.error('Ошибка в updatePlayer:', e);
+  }
+
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
 }
 
 animate();
 
-// ============================================================
-// RESIZE
-// ============================================================
 window.addEventListener('resize', () => {
+  if (!camera || !renderer) return;
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
