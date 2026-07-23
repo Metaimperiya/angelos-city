@@ -9,9 +9,10 @@ export const remotePlayers = {};
 export const remoteMeshes = {};
 
 export function initSocket() {
-  // ЖЁСТКИЙ АДРЕС ДЛЯ RENDER (ВПИШИ СВОЙ ДОМЕН)
-  const wsUrl = 'wss://angelos-city-3.onrender.com';
-  socket = new WebSocket(wsUrl);
+  // ПРАВИЛЬНЫЙ АДРЕС ДЛЯ RENDER
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  socket = new WebSocket(`${protocol}//${host}`);
 
   socket.onopen = () => {
     isConnected = true;
@@ -21,35 +22,18 @@ export function initSocket() {
       const el = document.getElementById('loading');
       if (el) el.style.display = 'none';
     }, 1000);
-    // Отправляем приветствие серверу
-    socket.send(JSON.stringify({
-      type: 'join',
-      name: 'Игрок_' + Math.random().toString(36).substr(2, 4),
-      x: 0,
-      z: 0
-    }));
   };
 
   socket.onmessage = (event) => {
     console.log('📩 Получено сообщение:', event.data);
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === 'init') {
-        console.log('✅ Инициализация получена, игроков:', Object.keys(data.players).length);
-      }
-    } catch (e) {
-      console.error('Ошибка парсинга:', e);
-    }
   };
 
   socket.onclose = () => {
     isConnected = false;
     console.log('🔴 Отключено от сервера');
-    document.getElementById('loading').textContent = '❌ Потеря соединения';
   };
 
   socket.onerror = (error) => {
     console.error('❌ Ошибка WebSocket:', error);
-    document.getElementById('loading').textContent = '❌ Ошибка подключения';
   };
 }
