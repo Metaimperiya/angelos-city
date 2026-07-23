@@ -1,125 +1,31 @@
-// ============================================================
-// ФИЗИКА И ДВИЖЕНИЕ (РАБОЧИЙ ЭТАЛОН С RAYCASTING)
-// ============================================================
-
 import * as THREE from 'three';
-import { PlayerCamera } from './PlayerCamera.js';
-import { mainShip, shipSpawnPoint } from '../Ship.js';
 
-const downRaycaster = new THREE.Raycaster();
-const forwardRaycaster = new THREE.Raycaster();
-const downVector = new THREE.Vector3(0, -1, 0);
-const moveVector = new THREE.Vector3();
-const rayOrigin = new THREE.Vector3();
-
-export const PlayerController = {
-  group: null,
-  pos: null,
-  velocityY: 0,
-  isGrounded: true,
-  rotation: 0,
-
-  init(group, pos) {
-    this.group = group;
-    this.pos = pos;
-  },
-
-  update(input, delta) {
-    let moveX = input.moveX;
-    let moveZ = input.moveZ;
-
-    const speed = 11;
-    let moved = false;
-
-    if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
-      const len = Math.hypot(moveX, moveZ);
-      const normX = moveX / len;
-      const normZ = moveZ / len;
-
-      const yaw = PlayerCamera.euler.y;
-      const sin = Math.sin(yaw);
-      const cos = Math.cos(yaw);
-
-      let dx = (-normZ * sin + normX * cos) * speed * delta;
-      let dz = (-normZ * cos - normX * sin) * speed * delta;
-
-      // Проверка столкновений
-      if (mainShip) {
-        if (dx !== 0) {
-          moveVector.set(Math.sign(dx), 0, 0);
-          rayOrigin.set(this.pos.x, this.pos.y + 0.8, this.pos.z);
-          forwardRaycaster.set(rayOrigin, moveVector);
-          const hits = forwardRaycaster.intersectObject(mainShip, true);
-          if (hits.length > 0 && hits[0].distance < 0.7) {
-            if (Math.abs(hits[0].face.normal.y) < 0.5) dx = 0;
-          }
-        }
-        if (dz !== 0) {
-          moveVector.set(0, 0, Math.sign(dz));
-          rayOrigin.set(this.pos.x + dx, this.pos.y + 0.8, this.pos.z);
-          forwardRaycaster.set(rayOrigin, moveVector);
-          const hits = forwardRaycaster.intersectObject(mainShip, true);
-          if (hits.length > 0 && hits[0].distance < 0.7) {
-            if (Math.abs(hits[0].face.normal.y) < 0.5) dz = 0;
-          }
-        }
-      }
-
-      this.pos.x += dx;
-      this.pos.z += dz;
-      moved = true;
-
-      this.rotation = Math.atan2(dx, dz);
-      this.group.rotation.y = this.rotation;
-    }
-
-    // Ищем палубу под ногами
-    let floorY = 0; // Вода по умолчанию
-    if (mainShip) {
-      rayOrigin.set(this.pos.x, this.pos.y + 3, this.pos.z);
-      downRaycaster.set(rayOrigin, downVector);
-      const hits = downRaycaster.intersectObject(mainShip, true);
-
-      if (hits.length > 0) {
-        const hit = hits[0];
-        if (hit.point.y >= -1 && (this.pos.y + 3 - hit.point.y) <= 20) {
-          floorY = hit.point.y;
-        }
-      }
-    }
-
-    // Прыжки и гравитация
-    const jumpForce = 7;
-    const gravity = -20;
-
-    if (input.jump && this.isGrounded) {
-      this.velocityY = jumpForce;
-      this.isGrounded = false;
-    }
-
-    if (this.pos.y > floorY + 0.2 && this.isGrounded) {
-      this.isGrounded = false;
-    }
-
-    if (!this.isGrounded) {
-      this.velocityY += gravity * delta;
-      this.pos.y += this.velocityY * delta;
-
-      if (this.pos.y <= floorY) {
-        this.pos.y = floorY;
-        this.velocityY = 0;
-        this.isGrounded = true;
-      }
-    } else {
-      this.pos.y = floorY;
-    }
-
-    this.group.position.set(this.pos.x, this.pos.y, this.pos.z);
-
-    return moved;
-  },
-
-  getRotation() {
-    return this.rotation;
+export class PlayerController {
+  constructor(playerMesh, playerCamera) {
+    this.mesh = playerMesh;
+    this.playerCamera = playerCamera;
+    this.speed = 0.15; // Скорость перемещения
   }
-};
+
+  update(input) {
+    const moveDir = new THREE.Vector3(0, 0, 0);
+
+    // В Three.js: -Z это ВПРЕД, +Z это НАЗАД, -X это ВЛЕВО, +X это ВПРАВО
+    if (input.keys.forward) moveDir.z -= 1;  // W — Вперед (-Z)
+    if (input.keys.backward) moveDir.z += 1; // S — Назад (+Z)
+    if (input.keys.left) moveDir.x -= 1;     // A — Влево (-X)
+    if (input.keys.right) moveDir.x += 1;    // D — Вправо (+X)
+
+    // Если ничего не нажато — выходим
+    if (moveDir.lengthSq() === 0) return;
+
+    // Нормализуем, чтобы по диагонали не бегать быстрее
+    moveDir.normalize();
+
+    // Разворачиваем вектор движения по направлению взгляда камеры (ось Y)
+    moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerCamera.yaw);
+
+    // Применяем перемещение к мешу игрока
+    this.mesh.position.addScaledVector(moveDir, this.speed);
+  }
+}
