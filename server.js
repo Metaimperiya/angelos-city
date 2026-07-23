@@ -7,64 +7,64 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// Раздаём статику
 app.use(express.static('public'));
 
+// Храним всех игроков
 const players = {};
 
 wss.on('connection', (ws) => {
   const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
-
-  // Создаем игрока
+  
+  // Новый игрок
   players[id] = {
     x: (Math.random() - 0.5) * 10,
     z: (Math.random() - 0.5) * 10,
-    y: 8, // Начальная высота палубы
+    y: 0,
     color: Math.floor(Math.random() * 0xffffff),
     name: 'Игрок_' + Math.random().toString(36).substr(2, 4)
   };
 
   console.log(`🟢 Игрок ${id} подключился (${Object.keys(players).length} всего)`);
 
-  // Отправляем новому игроку его ID и список текущих игроков
+  // Отправляем новому игроку всех существующих
   ws.send(JSON.stringify({
     type: 'init',
     players: players,
     myId: id
   }));
 
-  // Рассылаем остальным информацию о новом игроке (ВКЛЮЧАЯ Y)
+  // Отправляем всем остальным, что новый игрок появился
   broadcast({
     type: 'playerJoin',
     id: id,
     x: players[id].x,
-    y: players[id].y, // 👈 ДОБАВЛЕНО
     z: players[id].z,
     color: players[id].color,
     name: players[id].name
   }, ws);
 
+  // Обработка сообщений от клиента
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-
-      if (data.type === 'move' && players[id]) {
-        // Сохраняем позиции (ВКЛЮЧАЯ ВЫСОТУ Y)
-        players[id].x = data.x;
-        players[id].y = data.y !== undefined ? data.y : players[id].y; // 👈 ДОБАВЛЕНО
-        players[id].z = data.z;
-        players[id].rotation = data.rotation || 0;
-
-        // Рассылаем новую позицию другим игрокам
-        broadcast({
-          type: 'playerMove',
-          id: id,
-          x: data.x,
-          y: players[id].y, // 👈 ДОБАВЛЕНО
-          z: data.z,
-          rotation: data.rotation || 0
-        }, ws);
+      
+      if (data.type === 'move') {
+        if (players[id]) {
+          players[id].x = data.x;
+          players[id].z = data.z;
+          players[id].rotation = data.rotation || 0;
+          
+          broadcast({
+            type: 'playerMove',
+            id: id,
+            x: data.x,
+            z: data.z,
+            rotation: data.rotation || 0
+          }, ws);
+        }
       }
-
+      
       if (data.type === 'chat') {
         broadcast({
           type: 'chat',
@@ -74,17 +74,21 @@ wss.on('connection', (ws) => {
         }, ws);
       }
     } catch (e) {
-      console.error('Ошибка обработки сообщения:', e);
+      console.error('Ошибка парсинга:', e);
     }
   });
 
   ws.on('close', () => {
     console.log(`🔴 Игрок ${id} отключился`);
     delete players[id];
-    broadcast({ type: 'playerLeave', id: id });
+    broadcast({
+      type: 'playerLeave',
+      id: id
+    });
   });
 });
 
+// Рассылка всем, кроме отправителя
 function broadcast(data, exclude) {
   wss.clients.forEach((client) => {
     if (client !== exclude && client.readyState === WebSocket.OPEN) {
