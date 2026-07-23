@@ -3,14 +3,14 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { initScene, scene, camera, renderer } from './src/core/scene.js';
-import { createWorld } from './src/core/world.js';
-import { loadShip } from './src/entities/Ship.js';
-import { createPlayer, initControls, updatePlayer, setDelta } from './src/entities/Player/index.js';
-import { initSocket, socket } from './src/network/socket.js';
-import { initSync } from './src/network/sync.js';
-import { initChat } from './src/ui/chat.js';
-import { updateHUD } from './src/ui/hud.js';
+import { initScene, scene, camera, renderer } from './core/scene.js';
+import { createWorld } from './core/world.js';
+import { loadShip } from './entities/Ship.js';
+import { createPlayer, initControls, updatePlayer, setDelta } from './entities/Player/index.js';
+import { initSocket, socket } from './network/socket.js';
+import { initSync } from './network/sync.js';
+import { initChat } from './ui/chat.js';
+import { updateHUD } from './ui/hud.js';
 
 // ============================================================
 // ИНИЦИАЛИЗАЦИЯ
