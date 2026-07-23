@@ -20,7 +20,10 @@ console.log('🚀 Запуск Angelos City...');
 initScene();
 createWorld();
 await loadShip();
+
+// ⬇️ ЭТОТ ВЫЗОВ ВКЛЮЧАЕТ МЫШКУ ⬇️
 initControls();
+
 createPlayer();
 initSocket();
 initChat();
