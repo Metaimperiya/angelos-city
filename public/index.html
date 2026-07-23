@@ -1,68 +1,50 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>🚢 Angelos City</title>
-  <link rel="stylesheet" href="style.css" />
-
-  <style>
-    /* Гарантируем, что 3D-холст растянут на весь экран и лежит под UI */
-    canvas {
-      position: fixed !important;
-      top: 0;
-      left: 0;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 0 !important;
-      outline: none;
-    }
-
-    /* Все элементы UI поверх 3D */
-    #loading, #players-count, #jump-btn, #chat, #chat-toggle {
-      z-index: 10;
-      position: absolute;
-    }
-
-    /* Заставка не блочит экран */
-    #loading {
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-family: sans-serif;
-      pointer-events: none;
-    }
-  </style>
-
-  <!-- Import Map для Three.js -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="loading">⏳ Подключение к серверу...</div>
-  <div id="players-count">👥 <span id="count-display">1</span></div>
-  <div id="jump-btn">⬆</div>
 
-  <div id="chat">
-    <div id="chat-log"></div>
-    <div id="chat-input-row">
-      <input id="chat-input" type="text" placeholder="Написать..." maxlength="100" />
-      <button id="chat-send">➤</button>
-    </div>
+<!-- ===== ЗАГРУЗКА ===== -->
+<div id="loading">⏳ Подключение к серверу...</div>
+
+<!-- ===== ИНФОРМАЦИЯ ===== -->
+<div id="controls">🎮 WASD — ходьба | Пробел — прыжок | Мышь — обзор</div>
+<div id="info">🖱️ Нажми на экран, чтобы захватить мышь</div>
+<div id="players-count">👥 <span id="count-display">1</span></div>
+
+<!-- ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ ===== -->
+<div id="joystick-area">
+  <div id="joystick-knob"></div>
+</div>
+<div id="camera-area"></div>
+<div id="jump-btn">⬆</div>
+
+<!-- ===== ПОДСКАЗКА ДЛЯ ТЕЛЕФОНА ===== -->
+<div id="rotate-hint">
+  <span>📱</span>
+  Поверни телефон<br>в горизонтальный режим
+</div>
+
+<!-- ===== ЧАТ ===== -->
+<div id="chat">
+  <div id="chat-log"></div>
+  <div id="chat-input-row">
+    <input id="chat-input" type="text" placeholder="Написать..." maxlength="100">
+    <button id="chat-send">➤</button>
   </div>
-  <button id="chat-toggle">💬 Чат</button>
+</div>
+<button id="chat-toggle">💬 Чат</button>
 
-  <!-- Точка входа ES-модулей -->
-  <script type="module" src="src/main.js"></script>
+<!-- ===== БИБЛИОТЕКИ ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<!-- ===== ИГРОВОЙ КОД ===== -->
+<script src="game.js"></script>
+
 </body>
 </html>
