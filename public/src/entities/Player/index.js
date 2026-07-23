@@ -53,16 +53,19 @@ export function createPlayer() {
     playerGroup.add(pupil);
   }
 
-  // 📍 СПАВН НА ПАЛУБЕ КОРАБЛЯ
+  // Спавн
   const spawn = teleportToShip();
   if (spawn) {
-    playerPos.x = spawn.x + (Math.random() - 0.5) * 3;
-    playerPos.z = spawn.z + (Math.random() - 0.5) * 3;
-    playerPos.y = spawn.y; // ← Теперь ставим точно на высоту палубы!
+    playerPos.x = spawn.x + (Math.random() - 0.5) * 4;
+    playerPos.z = spawn.z + (Math.random() - 0.5) * 4;
+    playerPos.y = spawn.y;
   }
 
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
   PlayerController.init(playerGroup, playerPos);
+
+  // 💥 Мгновенно отправляем координаты на сервер, чтобы другие не видели нас под водой (Y=0)
+  sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
 }
 
 export function updatePlayer() {
@@ -71,7 +74,6 @@ export function updatePlayer() {
   PlayerCamera.update(playerPos, input);
 
   if (moved) {
-    // Отправляем X, Y, Z и угол поворота
     sendPosition(playerPos.x, playerPos.y, playerPos.z, PlayerController.getRotation());
   }
 }
