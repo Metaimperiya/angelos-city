@@ -1,114 +1,108 @@
 // ============================================================
-// КОРАБЛЬ (ТОЧНЫЙ СПАВН ПО ТВОИМ ЛОКАЛЬНЫМ КООРДИНАТАМ)
+// КОРАБЛИ
 // ============================================================
 
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 import { scene } from '../core/scene.js';
-import { playerPos } from './Player/index.js';
-import { sendPosition } from '../network/sync.js';
 
+export let ships = [];
 export let mainShip = null;
 
-// 🎯 ТВОИ ТОЧНЫЕ ЛОКАЛЬНЫЕ КООРДИНАТЫ НА КОРАБЛЕ
-export const SPAWN_LOCAL = { x: 0.21, y: 49.53, z: 23.56 };
+const shipConfigs = [
+  { radius: 15, speed: 0.3, angle: 0 },
+  { radius: 20, speed: -0.2, angle: 2 },
+  { radius: 10, speed: 0.4, angle: 4 }
+];
 
-export let shipSpawnPoint = { x: 0, y: 10, z: 0 };
-
-export function loadShip() {
+export function loadShips() {
   return new Promise((resolve) => {
-    const loader = new GLTFLoader();
-    loader.load(
-      '/assets/models/karablik_Untitled.glb',
-      (gltf) => {
-        const shipModel = gltf.scene;
-        const shipContainer = new THREE.Group();
+    const loader = new THREE.GLTFLoader();
+    let loaded = 0;
 
-        // 1. Центрируем геометрию
-        const box = new THREE.Box3().setFromObject(shipModel);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
+    shipConfigs.forEach((cfg, index) => {
+      loader.load(
+        '/assets/models/karablik_Untitled.glb',
+        (gltf) => {
+          const ship = gltf.scene;
+          const box = new THREE.Box3().setFromObject(ship);
+          const center = box.getCenter(new THREE.Vector3());
+          ship.position.sub(center);
+          ship.position.y = 0.5;
 
-        shipModel.position.x = -center.x;
-        shipModel.position.z = -center.z;
-        shipModel.position.y = -box.min.y;
-
-        shipContainer.add(shipModel);
-
-        // 2. Размер 220м
-        const TARGET_SIZE = 220; 
-        const maxDim = Math.max(size.x, size.z);
-        const scale = TARGET_SIZE / (maxDim || 1);
-        shipContainer.scale.set(scale, scale, scale);
-
-        shipModel.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            if (child.material) {
-              child.material.metalness = 0.3;
-              child.material.roughness = 0.6;
-            }
+          const size = box.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          if (maxDim > 5) {
+            const scale = 5 / maxDim;
+            ship.scale.set(scale, scale, scale);
           }
-        });
 
-        // 3. Посадка в воду
-        const shipHeight = size.y * scale;
-        shipContainer.position.set(0, -shipHeight * 0.24, 0);
+          ship.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+              if (child.material) {
+                child.material.metalness = 0.6;
+                child.material.roughness = 0.3;
+              }
+            }
+          });
 
-        scene.add(shipContainer);
-        mainShip = shipContainer;
+          ships.push({
+            mesh: ship,
+            radius: cfg.radius,
+            speed: cfg.speed,
+            angle: cfg.angle
+          });
 
-        // 4. 🎯 ПЕРЕВОДИМ ТВОИ ЛОКАЛЬНЫЕ КООРДИНАТЫ В МИРОВЫЕ
-        const localVec = new THREE.Vector3(SPAWN_LOCAL.x, SPAWN_LOCAL.y, SPAWN_LOCAL.z);
-        const worldVec = shipContainer.localToWorld(localVec);
+          scene.add(ship);
 
-        shipSpawnPoint = { 
-          x: worldVec.x, 
-          y: worldVec.y, 
-          z: worldVec.z 
-        };
+          if (index === 0) {
+            mainShip = ship;
+            // Платформа для спавна
+            const platformGeo = new THREE.BoxGeometry(3, 0.2, 2);
+            const platformMat = new THREE.MeshPhongMaterial({
+              color: 0x00ff88,
+              transparent: true,
+              opacity: 0.0
+            });
+            const platform = new THREE.Mesh(platformGeo, platformMat);
+            platform.position.set(0, 1.5, 0);
+            ship.add(platform);
+          }
 
-        // Спавним игрока строго в выбранной тобой точке на палубе
-        if (playerPos) {
-          playerPos.x = shipSpawnPoint.x;
-          playerPos.y = shipSpawnPoint.y;
-          playerPos.z = shipSpawnPoint.z;
-          sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
+          loaded++;
+          if (loaded === shipConfigs.length) {
+            resolve();
+          }
+        },
+        undefined,
+        (error) => {
+          console.error('Ошибка загрузки корабля:', error);
+          loaded++;
+          if (loaded === shipConfigs.length) resolve();
         }
-
-        console.log('✅ Спавн точно настроен по твоим точкам:', SPAWN_LOCAL);
-        resolve();
-      },
-      undefined,
-      (error) => {
-        console.error('❌ Ошибка загрузки корабля:', error);
-        resolve();
-      }
-    );
+      );
+    });
   });
 }
 
-// 📍 СКАНЕР ТОЧЕК НА КОРАБЛЕ (Клавиша 'P')
-window.addEventListener('keydown', (e) => {
-  if ((e.code === 'KeyP' || e.key === 'p' || e.key === 'з') && mainShip && playerPos) {
-    const playerWorldVec = new THREE.Vector3(playerPos.x, playerPos.y, playerPos.z);
-    const shipLocalVec = mainShip.worldToLocal(playerWorldVec.clone());
+export function updateShips() {
+  const time = Date.now() / 1000;
+  ships.forEach((shipData) => {
+    const angle = time * shipData.speed + shipData.angle;
+    shipData.mesh.position.x = Math.cos(angle) * shipData.radius;
+    shipData.mesh.position.z = Math.sin(angle) * shipData.radius;
+    shipData.mesh.rotation.y = -angle;
+  });
+}
 
-    const coordsString = `x: ${shipLocalVec.x.toFixed(2)}, y: ${shipLocalVec.y.toFixed(2)}, z: ${shipLocalVec.z.toFixed(2)}`;
-    
-    console.log('%c 🎯 ЛОКАЛЬНАЯ ТОЧКА НА КОРАБЛЕ:', 'background: #222; color: #bada55; font-size: 16px');
-    console.log(coordsString);
+export function getMainShip() {
+  return mainShip;
+}
 
-    alert(`📍 Координаты точки на корабле:\n\n${coordsString}\n\n(Скопируй из F12)`);
-  }
-});
-
-export function teleportToShip() {
-  if (mainShip) {
-    const localVec = new THREE.Vector3(SPAWN_LOCAL.x, SPAWN_LOCAL.y, SPAWN_LOCAL.z);
-    const worldVec = mainShip.localToWorld(localVec);
-    return { x: worldVec.x, y: worldVec.y, z: worldVec.z };
-  }
-  return { ...shipSpawnPoint };
+export function teleportToMainShip() {
+  if (!mainShip) return;
+  const worldPos = new THREE.Vector3(0, 1.5, 0);
+  mainShip.localToWorld(worldPos);
+  return worldPos;
 }
