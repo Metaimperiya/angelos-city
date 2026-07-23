@@ -1,5 +1,5 @@
 // ============================================================
-// ФИЗИКА И ДВИЖЕНИЕ С RAYCASTING
+// ФИЗИКА И ДВИЖЕНИЕ (СТАБИЛЬНАЯ ВЕРСИЯ)
 // ============================================================
 
 import * as THREE from 'three';
@@ -8,7 +8,6 @@ import { mainShip, shipSpawnPoint } from '../Ship.js';
 
 const downRaycaster = new THREE.Raycaster();
 const forwardRaycaster = new THREE.Raycaster();
-
 const downVector = new THREE.Vector3(0, -1, 0);
 const moveVector = new THREE.Vector3();
 const rayOrigin = new THREE.Vector3();
@@ -44,7 +43,7 @@ export const PlayerController = {
       let dx = (-normZ * sin + normX * cos) * speed * delta;
       let dz = (-normZ * cos - normX * sin) * speed * delta;
 
-      // Проверка столкновений с мачтами/стенами
+      // Проверка столкновений
       if (mainShip) {
         if (dx !== 0) {
           moveVector.set(Math.sign(dx), 0, 0);
@@ -74,7 +73,7 @@ export const PlayerController = {
       this.group.rotation.y = this.rotation;
     }
 
-    // 🌊 ИЩЕМ ПОЛ ПОД НОГАМИ (ПАЛУБА ИЛИ ВОДА)
+    // Поиск палубы
     let floorY = 0; // Вода по умолчанию
     if (mainShip) {
       rayOrigin.set(this.pos.x, this.pos.y + 3, this.pos.z);
@@ -83,7 +82,6 @@ export const PlayerController = {
 
       if (hits.length > 0) {
         const hit = hits[0];
-        // Если палуба под нами не далее 20 метров
         if (hit.point.y >= -1 && (this.pos.y + 3 - hit.point.y) <= 20) {
           floorY = hit.point.y;
         }
