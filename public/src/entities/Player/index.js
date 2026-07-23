@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // ============================================================
-// ЕДИНЫЙ ПОЛНЫЙ МОДУЛЬ ИГРОКА (Управление + Создание + Корабль)
+// ЕДИНЫЙ ПОЛНЫЙ МОДУЛЬ ИГРОКА (Управление + Delta + Корабль)
 // ============================================================
 
 const inputState = {
@@ -13,8 +13,15 @@ const inputState = {
   run: false
 };
 
+let currentDelta = 0;
+
 export function getInput() {
   return inputState;
+}
+
+// Функция, которую ждёт main.js для передачи времени кадра
+export function setDelta(delta) {
+  currentDelta = delta;
 }
 
 // Экспортируем позицию игрока для Ship.js
@@ -47,7 +54,6 @@ export function initControls() {
 // Запускаем слушатели управления
 initControls();
 
-// Та самая функция, которую ждёт main.js
 export function createPlayer(scene) {
   const geometry = new THREE.BoxGeometry(1, 2, 1);
   const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
@@ -61,7 +67,8 @@ export function createPlayer(scene) {
   return playerMesh;
 }
 
-export function updatePlayer(delta, shipContainer, playerMesh) {
+export function updatePlayer(shipContainer, playerMesh) {
+  const delta = currentDelta || 0.016;
   const moveSpeed = 6.0 * delta;
 
   if (inputState.forward) playerPos.z -= moveSpeed;
