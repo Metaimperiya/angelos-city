@@ -1,31 +1,169 @@
-import * as THREE from 'three';
+// ============================================================
+// ВВОД (КЛАВИАТУРА, МЫШЬ, ТЕЛЕФОН)
+// ============================================================
 
-export class PlayerController {
-  constructor(playerMesh, playerCamera) {
-    this.mesh = playerMesh;
-    this.playerCamera = playerCamera;
-    this.speed = 0.15; // Скорость перемещения
+import { renderer } from '../../core/scene.js';
+
+export const PlayerInput = {
+  keys: {},
+  mouseX: 0,
+  mouseY: 0,
+  mouseLocked: false,
+  touchMove: { x: 0, y: 0 },
+  touchLook: { x: 0, y: 0 },
+  jump: false,
+
+  init() {
+    // Клавиатура
+    window.addEventListener('keydown', (e) => {
+      this.keys[e.key.toLowerCase()] = true;
+      this.keys[e.code] = true;
+    });
+    window.addEventListener('keyup', (e) => {
+      this.keys[e.key.toLowerCase()] = false;
+      this.keys[e.code] = false;
+    });
+
+    // МЫШЬ — клик вешаем на document, чтобы тач-зоны не блокировали захват
+    document.addEventListener('click', (e) => {
+      // Игнорируем клики по кнопкам UI, если они есть
+      if (e.target.tagName === 'BUTTON') return;
+      if (!this.mouseLocked && renderer?.domElement) {
+        renderer.domElement.requestPointerLock();
+      }
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+      this.mouseLocked = document.pointerLockElement === renderer.domElement;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!this.mouseLocked) return;
+      this.mouseX += e.movementX;
+      this.mouseY += e.movementY;
+    });
+
+    // Телефон
+    this.initTouch();
+  },
+
+  initTouch() {
+    const moveZone = document.createElement('div');
+    moveZone.style.cssText = 'position:absolute;top:0;left:0;width:50%;height:100%;z-index:40;touch-action:none;';
+    document.body.appendChild(moveZone);
+
+    const lookZone = document.createElement('div');
+    lookZone.style.cssText = 'position:absolute;top:0;right:0;width:50%;height:100%;z-index:40;touch-action:none;';
+    document.body.appendChild(lookZone);
+
+    let moveId = null, lookId = null;
+    let lastMove = { x: 0, y: 0 };
+    let lastLook = { x: 0, y: 0 };
+
+    moveZone.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      moveId = t.identifier;
+      lastMove = { x: t.clientX, y: t.clientY };
+      this.touchMove = { x: 0, y: 0 };
+    });
+
+    moveZone.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier === moveId) {
+          this.touchMove.x = t.clientX - lastMove.x;
+          this.touchMove.y = t.clientY - lastMove.y;
+          lastMove = { x: t.clientX, y: t.clientY };
+        }
+      }
+    });
+
+    const resetMove = (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === moveId) {
+          moveId = null;
+          this.touchMove = { x: 0, y: 0 };
+        }
+      }
+    };
+    moveZone.addEventListener('touchend', resetMove);
+    moveZone.addEventListener('touchcancel', () => { moveId = null; this.touchMove = { x: 0, y: 0 }; });
+
+    lookZone.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      lookId = t.identifier;
+      lastLook = { x: t.clientX, y: t.clientY };
+      this.touchLook = { x: 0, y: 0 };
+    });
+
+    lookZone.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier === lookId) {
+          this.touchLook.x += t.clientX - lastLook.x;
+          this.touchLook.y += t.clientY - lastLook.y;
+          lastLook = { x: t.clientX, y: t.clientY };
+        }
+      }
+    });
+
+    const resetLook = (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === lookId) {
+          lookId = null;
+          this.touchLook = { x: 0, y: 0 };
+        }
+      }
+    };
+    lookZone.addEventListener('touchend', resetLook);
+    lookZone.addEventListener('touchcancel', () => { lookId = null; this.touchLook = { x: 0, y: 0 }; });
+
+    const jumpBtn = document.getElementById('jump-btn');
+    if (jumpBtn) {
+      jumpBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        this.jump = true;
+      });
+      jumpBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        this.jump = false;
+      });
+    }
+  },
+
+  getInput() {
+    // Вперед / Назад (W / S) -> moveZ (+1 вперед, -1 назад)
+    let moveZ = 0;
+    if (this.keys['w'] || this.keys['keyw'] || this.keys['arrowup']) moveZ += 1;
+    if (this.keys['s'] || this.keys['keys'] || this.keys['arrowdown']) moveZ -= 1;
+
+    // Влево / Вправо (A / D) -> moveX (-1 влево, +1 вправо)
+    let moveX = 0;
+    if (this.keys['d'] || this.keys['keyd'] || this.keys['arrowright']) moveX += 1;
+    if (this.keys['a'] || this.keys['keya'] || this.keys['arrowleft']) moveX -= 1;
+
+    const tx = this.touchMove.x * 0.02;
+    const tz = -this.touchMove.y * 0.02;
+
+    const result = {
+      moveX: moveX + tx,
+      moveZ: moveZ + tz,
+      mouseX: this.mouseX,
+      mouseY: this.mouseY,
+      touchLookX: this.touchLook.x,
+      touchLookY: this.touchLook.y,
+      jump: this.keys['space'] || this.keys['Space'] || this.jump
+    };
+
+    this.resetMouse();
+    return result;
+  },
+
+  resetMouse() {
+    this.mouseX = 0;
+    this.mouseY = 0;
+    this.touchLook = { x: 0, y: 0 };
   }
-
-  update(input) {
-    const moveDir = new THREE.Vector3(0, 0, 0);
-
-    // В Three.js: -Z это ВПРЕД, +Z это НАЗАД, -X это ВЛЕВО, +X это ВПРАВО
-    if (input.keys.forward) moveDir.z -= 1;  // W — Вперед (-Z)
-    if (input.keys.backward) moveDir.z += 1; // S — Назад (+Z)
-    if (input.keys.left) moveDir.x -= 1;     // A — Влево (-X)
-    if (input.keys.right) moveDir.x += 1;    // D — Вправо (+X)
-
-    // Если ничего не нажато — выходим
-    if (moveDir.lengthSq() === 0) return;
-
-    // Нормализуем, чтобы по диагонали не бегать быстрее
-    moveDir.normalize();
-
-    // Разворачиваем вектор движения по направлению взгляда камеры (ось Y)
-    moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerCamera.yaw);
-
-    // Применяем перемещение к мешу игрока
-    this.mesh.position.addScaledVector(moveDir, this.speed);
-  }
-}
+};
