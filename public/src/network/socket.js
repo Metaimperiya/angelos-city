@@ -9,7 +9,7 @@ export const remotePlayers = {};
 export const remoteMeshes = {};
 
 let lastSend = 0;
-const TICK_RATE = 20; // 20 обновлений в секунду
+const TICK_RATE = 20;
 
 export function initSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -62,7 +62,6 @@ export function initSocket() {
   };
 }
 
-// ФИКС 2: Tick Rate
 export function sendPosition(x, z, rotation) {
   const now = performance.now();
   if (now - lastSend < 1000 / TICK_RATE) return;
@@ -78,17 +77,13 @@ export function sendPosition(x, z, rotation) {
   }
 }
 
-// ============================================================
-// УДАЛЁННЫЕ ИГРОКИ (ЗАГОТОВКА ПОД ИНТЕРПОЛЯЦИЮ)
-// ============================================================
 function addRemotePlayer(id, data) {
   console.log('👤 Новый игрок:', id);
-  // Здесь будет создание Mesh
+  // Здесь будет создание Mesh для удалённого игрока
 }
 
 function updateRemotePlayer(id, data) {
-  // ФИКС 5: Будет использоваться Lerp
-  // remoteMeshes[id].position.lerp(target, 0.2);
+  // Здесь будет обновление позиции
 }
 
 function removeRemotePlayer(id) {
