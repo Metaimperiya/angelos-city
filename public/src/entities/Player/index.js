@@ -27,7 +27,6 @@ export function createPlayer() {
   playerGroup = new THREE.Group();
   scene.add(playerGroup);
 
-  // Создаём модель персонажа
   const color = 0x00ff88;
   const bodyMat = new THREE.MeshPhongMaterial({ color, flatShading: true });
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.6), bodyMat);
@@ -52,7 +51,6 @@ export function createPlayer() {
     playerGroup.add(pupil);
   }
 
-  // Телепорт на корабль
   const spawn = teleportToShip();
   if (spawn) {
     playerPos.x = spawn.x + (Math.random() - 0.5) * 1.5;
@@ -61,16 +59,15 @@ export function createPlayer() {
 
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
 
-  // Инициализация контроллера
   PlayerController.init(playerGroup, playerPos);
 }
 
 export function updatePlayer() {
   const input = PlayerInput.getInput();
-  PlayerController.update(input, delta);
+  const moved = PlayerController.update(input, delta);
   PlayerCamera.update(playerPos, input);
 
-  if (input.moved) {
+  if (moved) {
     sendPosition(playerPos.x, playerPos.z, PlayerController.getRotation());
   }
 }
