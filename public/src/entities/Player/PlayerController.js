@@ -1,10 +1,10 @@
 // ============================================================
-// ФИЗИКА + ДВИЖЕНИЕ (С ПРОВЕРКОЙ КОЛЛИЗИЙ КОРАБЛЯ)
+// ФИЗИКА + ДВИЖЕНИЕ
 // ============================================================
 
 import * as THREE from 'three';
 import { PlayerCamera } from './PlayerCamera.js';
-import { checkShipCollision } from '../Ship.js'; // ← Импортируем проверку стен
+import { checkShipCollision } from '../Ship.js';
 
 export const PlayerController = {
   group: null,
@@ -19,10 +19,10 @@ export const PlayerController = {
   },
 
   update(input, delta) {
-    let moveX = input.moveX; // A (-1) / D (+1)
-    let moveZ = input.moveZ; // S (-1) / W (+1)
+    let moveX = input.moveX;
+    let moveZ = input.moveZ;
 
-    const speed = 8;
+    const speed = 10; // Слегка увеличим скорость под масштаб корабля
     let moved = false;
 
     if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
@@ -40,8 +40,7 @@ export const PlayerController = {
       const nextX = this.pos.x + dx;
       const nextZ = this.pos.z + dz;
 
-      // ⬇️ ПРОВЕРКА КОЛЛИЗИИ С КОРАБЛЕМ ⬇️
-      // Если спереди стенка корабля — не даем пройти по осям X и Z
+      // Проверка на столкновение с бортами
       if (!checkShipCollision(nextX, this.pos.z, this.pos.y)) {
         this.pos.x = nextX;
       }
@@ -51,14 +50,13 @@ export const PlayerController = {
 
       moved = true;
 
-      // Поворот персонажа
       this.rotation = Math.atan2(dx, dz);
       this.group.rotation.y = this.rotation;
     }
 
     // Прыжок и гравитация
-    const jumpForce = 5;
-    const gravity = -15;
+    const jumpForce = 6;
+    const gravity = -18;
 
     if (input.jump && this.isGrounded) {
       this.velocityY = jumpForce;
