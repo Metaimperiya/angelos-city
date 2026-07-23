@@ -2,6 +2,8 @@
 // ГЛАВНЫЙ ФАЙЛ
 // ============================================================
 
+import * as THREE from 'three'; // ← ЭТО ФИКС!
+
 import { initScene, scene, camera, renderer } from './core/scene.js';
 import { createWorld } from './core/world.js';
 import { loadShip } from './entities/Ship.js';
@@ -17,10 +19,7 @@ import { updateHUD } from './ui/hud.js';
 initScene();
 createWorld();
 await loadShip();
-
-// ФИКС 2: Включаем управление мышью
 initControls();
-
 createPlayer();
 initSocket();
 initChat();
