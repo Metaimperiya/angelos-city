@@ -1,8 +1,8 @@
 // ============================================================
-// МИР (МОРЕ)
+// МИР (МОРЕ, НЕБО)
 // ============================================================
 
-import * as THREE from 'three';
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 import { scene } from './scene.js';
 
 export function createWorld() {
@@ -20,5 +20,6 @@ export function createWorld() {
   sea.receiveShadow = true;
   scene.add(sea);
 
-  console.log('🌊 Море создано');
+  // Грид (пока не нужен, но пусть будет)
+  // Можно добавить позже
 }
