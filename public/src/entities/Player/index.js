@@ -18,6 +18,11 @@ export function setDelta(value) {
   delta = value;
 }
 
+export function initControls() {
+  PlayerInput.init();
+  PlayerCamera.init(camera);
+}
+
 export function createPlayer() {
   playerGroup = new THREE.Group();
   scene.add(playerGroup);
@@ -56,23 +61,15 @@ export function createPlayer() {
 
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
 
-  // Инициализация модулей
-  PlayerInput.init();
-  PlayerCamera.init(camera);
+  // Инициализация контроллера
   PlayerController.init(playerGroup, playerPos);
 }
 
 export function updatePlayer() {
-  // Получаем ввод
   const input = PlayerInput.getInput();
-
-  // Управление движением
   PlayerController.update(input, delta);
-
-  // Камера
   PlayerCamera.update(playerPos, input);
 
-  // Синхронизация
   if (input.moved) {
     sendPosition(playerPos.x, playerPos.z, PlayerController.getRotation());
   }
