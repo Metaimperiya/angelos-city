@@ -8,7 +8,7 @@ import { teleportToShip } from '../Ship.js';
 import { PlayerInput } from './PlayerInput.js';
 import { PlayerController } from './PlayerController.js';
 import { PlayerCamera } from './PlayerCamera.js';
-import { sendPosition } from '../../network/sync.js'; // ← ИЗМЕНЕНО
+import { sendPosition } from '../../network/sync.js';
 
 export let playerPos = { x: 0, z: 0, y: 0 };
 let playerGroup;
@@ -42,23 +42,26 @@ export function createPlayer() {
 
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
   for (let side = -1; side <= 1; side += 2) {
     const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), eyeMat);
     eye.position.set(side * 0.2, 1.6, 0.35);
     playerGroup.add(eye);
+
     const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), pupilMat);
     pupil.position.set(side * 0.2, 1.6, 0.45);
     playerGroup.add(pupil);
   }
 
+  // 📍 СПАВН НА ПАЛУБЕ КОРАБЛЯ
   const spawn = teleportToShip();
   if (spawn) {
-    playerPos.x = spawn.x + (Math.random() - 0.5) * 1.5;
-    playerPos.z = spawn.z + (Math.random() - 0.5) * 1.5;
+    playerPos.x = spawn.x + (Math.random() - 0.5) * 3;
+    playerPos.z = spawn.z + (Math.random() - 0.5) * 3;
+    playerPos.y = spawn.y; // ← Теперь ставим точно на высоту палубы!
   }
 
   playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
-
   PlayerController.init(playerGroup, playerPos);
 }
 
@@ -68,7 +71,8 @@ export function updatePlayer() {
   PlayerCamera.update(playerPos, input);
 
   if (moved) {
-    sendPosition(playerPos.x, playerPos.z, PlayerController.getRotation());
+    // Отправляем X, Y, Z и угол поворота
+    sendPosition(playerPos.x, playerPos.y, playerPos.z, PlayerController.getRotation());
   }
 }
 
