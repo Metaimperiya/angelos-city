@@ -20,6 +20,5 @@ export function createWorld() {
   sea.receiveShadow = true;
   scene.add(sea);
 
-  // Грид (пока не нужен, но пусть будет)
-  // Можно добавить позже
+  console.log('🌊 Море создано');
 }
