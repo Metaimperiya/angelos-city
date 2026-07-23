@@ -1,40 +1,99 @@
 import * as THREE from 'three';
-import { initControls, getInput } from './PlayerInput.js';
 
-// Запускаем инициализацию клавиатуры и тача при старте модуля
-initControls();
+// ============================================================
+// ПОЛНЫЙ МОДУЛЬ ИГРОКА И ВВОДА (Клавиатура + Позиция для корабля)
+// ============================================================
 
-// Экспортируем позицию игрока, которую ждет Ship.js (ошибка исчезнет сразу)
+const inputState = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  jump: false,
+  run: false
+};
+
+export function getInput() {
+  return inputState;
+}
+
+// Экспортируем позицию, которую ждёт Ship.js, чтобы убрать ошибку импорта
 export const playerPos = new THREE.Vector3(0, 5, -15);
 
-export class Player {
-    constructor(scene) {
-        // Создаем базовый меш игрока (куб), чтобы было видно на палубе
-        const geometry = new THREE.BoxGeometry(1, 2, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        this.mesh = new THREE.Mesh(geometry, material);
-        
-        // Устанавливаем начальные координаты
-        this.mesh.position.copy(playerPos);
-        scene.add(this.mesh);
+export function initControls() {
+  // Обработка клавиатуры (layout-agnostic через e.code)
+  window.addEventListener('keydown', (e) => {
+    switch (e.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        inputState.forward = true;
+        break;
+      case 'KeyS':
+      case 'ArrowDown':
+        inputState.backward = true;
+        break;
+      case 'KeyA':
+      case 'ArrowLeft':
+        inputState.left = true;
+        break;
+      case 'KeyD':
+      case 'ArrowRight':
+        inputState.right = true;
+        break;
+      case 'Space':
+        inputState.jump = true;
+        break;
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        inputState.run = true;
+        break;
     }
+  });
 
-    update(delta, shipContainer) {
-        const input = getInput();
-        const moveSpeed = 6.0 * delta;
-
-        // Простое движение по локальным осям
-        if (input.forward) this.mesh.position.z -= moveSpeed;
-        if (input.backward) this.mesh.position.z += moveSpeed;
-        if (input.left) this.mesh.position.x -= moveSpeed;
-        if (input.right) this.mesh.position.x += moveSpeed;
-
-        // Обновляем экспортируемую позицию для синхронизации
-        playerPos.copy(this.mesh.position);
-
-        // Если игрок на корабле, можно привязать его через localToWorld прямо здесь:
-        if (shipContainer) {
-            // shipContainer.localToWorld(playerPos);
-        }
+  window.addEventListener('keyup', (e) => {
+    switch (e.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        inputState.forward = false;
+        break;
+      case 'KeyS':
+      case 'ArrowDown':
+        inputState.backward = false;
+        break;
+      case 'KeyA':
+      case 'ArrowLeft':
+        inputState.left = false;
+        break;
+      case 'KeyD':
+      case 'ArrowRight':
+        inputState.right = false;
+        break;
+      case 'Space':
+        inputState.jump = false;
+        break;
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        inputState.run = false;
+        break;
     }
+  });
+
+  console.log('✅ Модуль ввода (PlayerInput) успешно инициализирован.');
+}
+
+// Автоматически запускаем опрос клавиш при загрузке модуля
+initControls();
+
+export function updatePlayer(delta, shipContainer) {
+  const moveSpeed = 6.0 * delta;
+
+  if (inputState.forward) playerPos.z -= moveSpeed;
+  if (inputState.backward) playerPos.z += moveSpeed;
+  if (inputState.left) playerPos.x -= moveSpeed;
+  if (inputState.right) playerPos.x += moveSpeed;
+
+  // Если передан контейнер корабля, применяем трансформацию localToWorld
+  if (shipContainer) {
+    shipContainer.localToWorld(playerPos);
+  }
 }
