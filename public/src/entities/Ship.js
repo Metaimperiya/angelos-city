@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (ОДИН, СТОИТ НА МЕСТЕ)
+// КОРАБЛЬ (ОДИН, БЕЗ ДВИЖЕНИЯ)
 // ============================================================
 
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
@@ -7,7 +7,6 @@ import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/
 import { scene } from '../core/scene.js';
 
 export let mainShip = null;
-export let shipPosition = { x: 0, z: 0 };
 
 export function loadShip() {
   return new Promise((resolve) => {
@@ -16,22 +15,17 @@ export function loadShip() {
       '/assets/models/karablik_Untitled.glb',
       (gltf) => {
         const ship = gltf.scene;
-        
-        // Центрируем корабль
         const box = new THREE.Box3().setFromObject(ship);
         const center = box.getCenter(new THREE.Vector3());
         ship.position.sub(center);
-        
-        // Ставим на воду
         ship.position.y = 0.5;
-        
-        // Масштабируем (увеличиваем, чтобы был больше)
+
+        // Увеличиваем масштаб
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 8 / maxDim; // Увеличили с 5 до 8
+        const scale = 8 / maxDim;
         ship.scale.set(scale, scale, scale);
 
-        // Тени и материалы
         ship.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
@@ -43,12 +37,10 @@ export function loadShip() {
           }
         });
 
-        // Добавляем в сцену
         scene.add(ship);
         mainShip = ship;
-        shipPosition = { x: 0, z: 0 };
 
-        // Невидимая платформа для ходьбы
+        // Невидимая платформа
         const platformGeo = new THREE.BoxGeometry(3, 0.2, 2);
         const platformMat = new THREE.MeshPhongMaterial({
           color: 0x00ff88,
@@ -65,7 +57,7 @@ export function loadShip() {
       undefined,
       (error) => {
         console.error('❌ Ошибка загрузки корабля:', error);
-        resolve(); // даже если ошибка — идём дальше
+        resolve();
       }
     );
   });
