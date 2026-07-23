@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // ============================================================
-// ПОЛНЫЙ МОДУЛЬ ИГРОКА И ВВОДА (Клавиатура + Позиция для корабля)
+// ЕДИНЫЙ ПОЛНЫЙ МОДУЛЬ ИГРОКА (Управление + Позиция + Корабль)
 // ============================================================
 
 const inputState = {
@@ -13,15 +13,16 @@ const inputState = {
   run: false
 };
 
+// Экспортируем функцию получения состояния ввода
 export function getInput() {
   return inputState;
 }
 
-// Экспортируем позицию, которую ждёт Ship.js, чтобы убрать ошибку импорта
+// Экспортируем позицию игрока, которую ждёт Ship.js (убирает ошибку импорта)
 export const playerPos = new THREE.Vector3(0, 5, -15);
 
+// Инициализация слушателей клавиатуры
 export function initControls() {
-  // Обработка клавиатуры (layout-agnostic через e.code)
   window.addEventListener('keydown', (e) => {
     switch (e.code) {
       case 'KeyW':
@@ -78,21 +79,31 @@ export function initControls() {
     }
   });
 
-  console.log('✅ Модуль ввода (PlayerInput) успешно инициализирован.');
+  console.log('✅ Модуль игрока и ввода полностью инициализирован.');
 }
 
-// Автоматически запускаем опрос клавиш при загрузке модуля
+// Автоматически запускаем контроллер при старте
 initControls();
 
+// Главная функция обновления игрока в игровом цикле
 export function updatePlayer(delta, shipContainer) {
   const moveSpeed = 6.0 * delta;
 
-  if (inputState.forward) playerPos.z -= moveSpeed;
-  if (inputState.backward) playerPos.z += moveSpeed;
-  if (inputState.left) playerPos.x -= moveSpeed;
-  if (inputState.right) playerPos.x += moveSpeed;
+  // Изменяем локальные координаты на основе нажатых клавиш
+  if (inputState.forward) {
+    playerPos.z -= moveSpeed;
+  }
+  if (inputState.backward) {
+    playerPos.z += moveSpeed;
+  }
+  if (inputState.left) {
+    playerPos.x -= moveSpeed;
+  }
+  if (inputState.right) {
+    playerPos.x += moveSpeed;
+  }
 
-  // Если передан контейнер корабля, применяем трансформацию localToWorld
+  // Главная магия: переводим локальные координаты палубы в мировые с учётом движения корабля
   if (shipContainer) {
     shipContainer.localToWorld(playerPos);
   }
