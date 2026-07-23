@@ -1,15 +1,10 @@
 // ============================================================
-// WEB SOCKET (МУЛЬТИПЛЕЕР)
+// WEB SOCKET (ТОЛЬКО ПОДКЛЮЧЕНИЕ)
 // ============================================================
 
 export let socket;
-export let myId = '';
 export let isConnected = false;
-export const remotePlayers = {};
-export const remoteMeshes = {};
-
-let lastSend = 0;
-const TICK_RATE = 20;
+let reconnectTimer = null;
 
 export function initSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -26,35 +21,16 @@ export function initSocket() {
     }, 1000);
   };
 
-  socket.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === 'init') {
-        myId = data.myId;
-        console.log('Мой ID:', myId);
-        for (const id in data.players) {
-          if (id !== myId) {
-            addRemotePlayer(id, data.players[id]);
-          }
-        }
-      }
-      if (data.type === 'playerJoin') {
-        addRemotePlayer(data.id, data);
-      }
-      if (data.type === 'playerMove') {
-        updateRemotePlayer(data.id, data);
-      }
-      if (data.type === 'playerLeave') {
-        removeRemotePlayer(data.id);
-      }
-    } catch (e) {
-      console.error('Ошибка парсинга:', e);
-    }
-  };
-
   socket.onclose = () => {
     isConnected = false;
     console.log('🔴 Отключено от сервера');
+    document.getElementById('loading').textContent = '❌ Потеря соединения';
+    // Автопереподключение через 3 секунды
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => {
+      console.log('🔄 Переподключение...');
+      initSocket();
+    }, 3000);
   };
 
   socket.onerror = (error) => {
@@ -62,30 +38,10 @@ export function initSocket() {
   };
 }
 
-export function sendPosition(x, z, rotation) {
-  const now = performance.now();
-  if (now - lastSend < 1000 / TICK_RATE) return;
-  lastSend = now;
-
+export function sendToServer(data) {
   if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({
-      type: 'move',
-      x: x,
-      z: z,
-      rotation: rotation || 0
-    }));
+    socket.send(JSON.stringify(data));
+  } else {
+    console.warn('⚠️ Сокет не открыт, данные не отправлены');
   }
-}
-
-function addRemotePlayer(id, data) {
-  console.log('👤 Новый игрок:', id);
-  // Здесь будет создание Mesh для удалённого игрока
-}
-
-function updateRemotePlayer(id, data) {
-  // Здесь будет обновление позиции
-}
-
-function removeRemotePlayer(id) {
-  console.log('👤 Игрок ушёл:', id);
 }
