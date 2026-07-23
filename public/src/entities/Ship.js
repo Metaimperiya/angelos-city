@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (СПАВН НА ОТКРЫТОЙ ПАЛУБЕ)
+// КОРАБЛЬ (СПАВН НА ГЛАВНОЙ ПАЛУБЕ)
 // ============================================================
 
 import * as THREE from 'three';
@@ -9,7 +9,11 @@ import { playerPos } from './Player/index.js';
 import { sendPosition } from '../network/sync.js';
 
 export let mainShip = null;
-export let shipSpawnPoint = { x: 0, y: 15, z: -15 };
+
+// 🎯 Безопасная точка на палубе (НЕ на мачте!)
+export const SPAWN_LOCAL = { x: 0, y: 12, z: -5 };
+
+export let shipSpawnPoint = { x: 0, y: 10, z: 0 };
 
 export function loadShip() {
   return new Promise((resolve) => {
@@ -55,24 +59,17 @@ export function loadShip() {
         scene.add(shipContainer);
         mainShip = shipContainer;
 
-        // 4. Ищем пол на открытой части палубы (z: -15)
-        const raycaster = new THREE.Raycaster(
-          new THREE.Vector3(0, 150, -15),
-          new THREE.Vector3(0, -1, 0)
-        );
-        const hits = raycaster.intersectObject(shipContainer, true);
+        // 4. Переводим локальные координаты спавна в мировые
+        const localVec = new THREE.Vector3(SPAWN_LOCAL.x, SPAWN_LOCAL.y, SPAWN_LOCAL.z);
+        const worldVec = shipContainer.localToWorld(localVec);
 
-        if (hits.length > 0) {
-          shipSpawnPoint = { 
-            x: 0, 
-            y: hits[0].point.y + 1.0, 
-            z: -15 
-          };
-        } else {
-          shipSpawnPoint = { x: 0, y: 15, z: -15 };
-        }
+        shipSpawnPoint = { 
+          x: worldVec.x, 
+          y: worldVec.y, 
+          z: worldVec.z 
+        };
 
-        // Спавним игрока
+        // Спавним игрока ровно на палубе
         if (playerPos) {
           playerPos.x = shipSpawnPoint.x;
           playerPos.y = shipSpawnPoint.y;
@@ -80,7 +77,7 @@ export function loadShip() {
           sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
         }
 
-        console.log('✅ Заспавнен на свободной палубе:', shipSpawnPoint);
+        console.log('✅ Игрок спавнится на палубе!');
         resolve();
       },
       undefined,
@@ -100,11 +97,18 @@ window.addEventListener('keydown', (e) => {
 
     const coordsString = `x: ${shipLocalVec.x.toFixed(2)}, y: ${shipLocalVec.y.toFixed(2)}, z: ${shipLocalVec.z.toFixed(2)}`;
     
-    console.log('🎯 ЛОКАЛЬНАЯ ТОЧКА:', coordsString);
+    console.log('%c 🎯 ЛОКАЛЬНАЯ ТОЧКА НА КОРАБЛЕ:', 'background: #222; color: #bada55; font-size: 16px');
+    console.log(coordsString);
+
     alert(`📍 Координаты точки на корабле:\n\n${coordsString}\n\n(Скопируй из F12)`);
   }
 });
 
 export function teleportToShip() {
+  if (mainShip) {
+    const localVec = new THREE.Vector3(SPAWN_LOCAL.x, SPAWN_LOCAL.y, SPAWN_LOCAL.z);
+    const worldVec = mainShip.localToWorld(localVec);
+    return { x: worldVec.x, y: worldVec.y, z: worldVec.z };
+  }
   return { ...shipSpawnPoint };
 }
