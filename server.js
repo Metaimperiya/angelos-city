@@ -7,7 +7,6 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Раздаём статику из папки public
 app.use(express.static('public'));
 
 const players = {};
@@ -22,8 +21,6 @@ wss.on('connection', (ws) => {
     color: Math.floor(Math.random() * 0xffffff),
     name: 'Игрок_' + Math.random().toString(36).substr(2, 4)
   };
-
-  console.log(`🟢 Игрок ${id} подключился (${Object.keys(players).length} всего)`);
 
   ws.send(JSON.stringify({
     type: 'init',
@@ -67,7 +64,6 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    console.log(`🔴 Игрок ${id} отключился`);
     delete players[id];
     broadcast({ type: 'playerLeave', id: id });
   });
