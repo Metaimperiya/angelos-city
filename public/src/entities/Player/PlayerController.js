@@ -1,10 +1,17 @@
 // ============================================================
-// ФИЗИКА + ДВИЖЕНИЕ (С ПАЛУБОЙ И ПАДЕНИЕМ ЗА БОРТ)
+// ФИЗИКА + ДВИЖЕНИЕ (НА ЛУЧАХ / RAYCASTING)
 // ============================================================
 
 import * as THREE from 'three';
 import { PlayerCamera } from './PlayerCamera.js';
-import { checkShipCollision, shipSpawnPoint, shipBoundingBox } from '../Ship.js';
+import { mainShip } from '../Ship.js';
+
+const downRaycaster = new THREE.Raycaster();
+const forwardRaycaster = new THREE.Raycaster();
+
+const downVector = new THREE.Vector3(0, -1, 0);
+const moveVector = new THREE.Vector3();
+const rayOrigin = new THREE.Vector3();
 
 export const PlayerController = {
   group: null,
@@ -22,7 +29,7 @@ export const PlayerController = {
     let moveX = input.moveX;
     let moveZ = input.moveZ;
 
-    const speed = 10;
+    const speed = 12; // Скорость бега под огромный корабль
     let moved = false;
 
     if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
@@ -34,52 +41,69 @@ export const PlayerController = {
       const sin = Math.sin(yaw);
       const cos = Math.cos(yaw);
 
-      const dx = (-normZ * sin + normX * cos) * speed * delta;
-      const dz = (-normZ * cos - normX * sin) * speed * delta;
+      let dx = (-normZ * sin + normX * cos) * speed * delta;
+      let dz = (-normZ * cos - normX * sin) * speed * delta;
 
-      const nextX = this.pos.x + dx;
-      const nextZ = this.pos.z + dz;
-
-      // Проверка стен (работает, если мы ниже палубы)
-      if (!checkShipCollision(nextX, this.pos.z, this.pos.y)) {
-        this.pos.x = nextX;
+      // 🛑 ПРОВЕРКА ПРЕПЯТСТВИЙ СПРЕДИ (Мачты, руль, сетки, стены)
+      if (mainShip) {
+        // Проверяем сдвиг по X
+        if (dx !== 0) {
+          moveVector.set(Math.sign(dx), 0, 0);
+          rayOrigin.set(this.pos.x, this.pos.y + 0.8, this.pos.z);
+          forwardRaycaster.set(rayOrigin, moveVector);
+          const hits = forwardRaycaster.intersectObject(mainShip, true);
+          if (hits.length > 0 && hits[0].distance < 0.6) {
+            if (Math.abs(hits[0].face.normal.y) < 0.5) dx = 0; // Стенка/мачта
+          }
+        }
+        // Проверяем сдвиг по Z
+        if (dz !== 0) {
+          moveVector.set(0, 0, Math.sign(dz));
+          rayOrigin.set(this.pos.x + dx, this.pos.y + 0.8, this.pos.z);
+          forwardRaycaster.set(rayOrigin, moveVector);
+          const hits = forwardRaycaster.intersectObject(mainShip, true);
+          if (hits.length > 0 && hits[0].distance < 0.6) {
+            if (Math.abs(hits[0].face.normal.y) < 0.5) dz = 0; // Стенка/мачта
+          }
+        }
       }
-      if (!checkShipCollision(this.pos.x, nextZ, this.pos.y)) {
-        this.pos.z = nextZ;
-      }
 
+      this.pos.x += dx;
+      this.pos.z += dz;
       moved = true;
 
       this.rotation = Math.atan2(dx, dz);
       this.group.rotation.y = this.rotation;
     }
 
-    // 🌊 ОПРЕДЕЛЯЕМ ВЫСОТУ ПОЛА (Палуба или Вода)
+    // 🌊 ПРИМАГНИЧИВАНИЕ К ПАЛУБЕ (Сканируем пол под ногами)
     let floorY = 0; // По умолчанию вода
-    if (shipBoundingBox && !shipBoundingBox.isEmpty()) {
-      const isOverDeck =
-        this.pos.x >= shipBoundingBox.min.x &&
-        this.pos.x <= shipBoundingBox.max.x &&
-        this.pos.z >= shipBoundingBox.min.z &&
-        this.pos.z <= shipBoundingBox.max.z;
+    if (mainShip) {
+      rayOrigin.set(this.pos.x, this.pos.y + 3, this.pos.z);
+      downRaycaster.set(rayOrigin, downVector);
+      const hits = downRaycaster.intersectObject(mainShip, true);
 
-      if (isOverDeck) {
-        floorY = shipSpawnPoint.y;
+      if (hits.length > 0) {
+        const hit = hits[0];
+        // Если палуба под нами не глубже чем в 15 метрах
+        if (hit.point.y >= -1 && (this.pos.y + 3 - hit.point.y) <= 15) {
+          floorY = hit.point.y;
+        }
       }
     }
 
-    // Гравитация и Прыжки
-    const jumpForce = 6;
-    const gravity = -18;
+    // 🥾 ПРЫЖКИ И ГРАВИТАЦИЯ
+    const jumpForce = 8;
+    const gravity = -22;
 
     if (input.jump && this.isGrounded) {
       this.velocityY = jumpForce;
       this.isGrounded = false;
     }
 
-    // Если падем или сошли с края палубы
-    if (this.pos.y > floorY && this.isGrounded) {
-      this.isGrounded = false; // Сошли с палубы за борт!
+    // Если сошли с края палубы за борт
+    if (this.pos.y > floorY + 0.2 && this.isGrounded) {
+      this.isGrounded = false;
     }
 
     if (!this.isGrounded) {
@@ -91,6 +115,9 @@ export const PlayerController = {
         this.velocityY = 0;
         this.isGrounded = true;
       }
+    } else {
+      // Плавное прилипание к геометрии палубы
+      this.pos.y = floorY;
     }
 
     this.group.position.set(this.pos.x, this.pos.y, this.pos.z);
