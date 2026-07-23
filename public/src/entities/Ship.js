@@ -10,8 +10,8 @@ import { sendPosition } from '../network/sync.js';
 
 export let mainShip = null;
 
-// 🎯 ТВОИ ТОЧНЫЕ ЛОКАЛЬНЫЕ КООРДИНАТЫ НА КОРАБЛЕ
-export const SPAWN_LOCAL = { x: 0.21, y: 49.53, z: 23.56 };
+// 🎯 НОВЫЕ ТОЧНЫЕ ЛОКАЛЬНЫЕ КООРДИНАТЫ (СО СКРИНШОТА)
+export const SPAWN_LOCAL = { x: 0.49, y: 40.31, z: 36.01 };
 
 export let shipSpawnPoint = { x: 0, y: 10, z: 0 };
 
