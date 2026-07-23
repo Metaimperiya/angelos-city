@@ -1,100 +1,186 @@
 // ============================================================
-// ФИЗИКА И ДВИЖЕНИЕ ИГРОКА (УНИВЕРСАЛЬНЫЙ ВЕКТОР ВВОДА)
+// ЕДИНЫЙ МОДУЛЬ ВВОДА (КЛАВИАТУРА + МОБИЛЬНЫЙ ДЖОЙСТИК)
 // ============================================================
 
-import * as THREE from 'three';
-import { PlayerCamera } from './PlayerCamera.js';
-import { mainShip } from '../Ship.js';
-
-const downRaycaster = new THREE.Raycaster();
-const downVector = new THREE.Vector3(0, -1, 0);
-const rayOrigin = new THREE.Vector3();
-
-export const PlayerController = {
-  group: null,
-  pos: null,
-  velocityY: 0,
-  isGrounded: true,
-  rotation: 0,
-
-  init(group, pos) {
-    this.group = group;
-    this.pos = pos;
-  },
-
-  update(input, delta) {
-    // Берём готовые векторы из нового PlayerInput.js
-    let moveX = input.moveX;
-    let moveZ = input.moveZ;
-
-    const speed = 14;
-    let moved = false;
-
-    if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
-      const len = Math.hypot(moveX, moveZ);
-      const normX = moveX / (len || 1);
-      const normZ = moveZ / (len || 1);
-
-      const yaw = PlayerCamera.euler ? PlayerCamera.euler.y : 0;
-      const sin = Math.sin(yaw);
-      const cos = Math.cos(yaw);
-
-      // Рассчитываем смещение относительно направления камеры
-      let dx = (-normZ * sin + normX * cos) * speed * delta;
-      let dz = (-normZ * cos - normX * sin) * speed * delta;
-
-      this.pos.x += dx;
-      this.pos.z += dz;
-      moved = true;
-
-      this.rotation = Math.atan2(dx, dz);
-      this.group.rotation.y = this.rotation;
-    }
-
-    // 🌊 ИЩЕМ ПАЛУБЫ/ПОЛ (Примагничивание)
-    let floorY = 0; // Вода по умолчанию
-    if (mainShip) {
-      rayOrigin.set(this.pos.x, this.pos.y + 5.0, this.pos.z);
-      downRaycaster.set(rayOrigin, downVector);
-      const hits = downRaycaster.intersectObject(mainShip, true);
-
-      if (hits.length > 0) {
-        floorY = hits[0].point.y;
-      }
-    }
-
-    // 🥾 ПРЫЖКИ И ГРАВИТАЦИЯ
-    const jumpForce = 9;
-    const gravity = -24;
-
-    if (input.jump && this.isGrounded) {
-      this.velocityY = jumpForce;
-      this.isGrounded = false;
-    }
-
-    if (this.pos.y > floorY + 0.3 && this.isGrounded) {
-      this.isGrounded = false;
-    }
-
-    if (!this.isGrounded) {
-      this.velocityY += gravity * delta;
-      this.pos.y += this.velocityY * delta;
-
-      if (this.pos.y <= floorY) {
-        this.pos.y = floorY;
-        this.velocityY = 0;
-        this.isGrounded = true;
-      }
-    } else {
-      this.pos.y = floorY;
-    }
-
-    this.group.position.set(this.pos.x, this.pos.y, this.pos.z);
-
-    return moved;
-  },
-
-  getRotation() {
-    return this.rotation;
-  }
+export const keys = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  jump: false
 };
+
+export const inputState = {
+  moveX: 0,
+  moveZ: 0,
+  jump: false
+};
+
+// Переменные для мобильного джойстика
+let joystickTouchId = null;
+let joystickOrigin = { x: 0, y: 0 };
+let joystickMove = { x: 0, y: 0 };
+const JOYSTICK_RADIUS = 50; // Радиус хода джойстика в px
+
+// --- 1. КЛАВИАТУРА ---
+function handleKey(e, isPressed) {
+  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+    return;
+  }
+
+  const code = e.code;
+  let handled = true;
+
+  switch (code) {
+    case 'KeyW':
+    case 'ArrowUp':
+      keys.forward = isPressed;
+      break;
+    case 'KeyS':
+    case 'ArrowDown':
+      keys.backward = isPressed;
+      break;
+    case 'KeyA':
+    case 'ArrowLeft':
+      keys.left = isPressed;
+      break;
+    case 'KeyD':
+    case 'ArrowRight':
+      keys.right = isPressed;
+      break;
+    case 'Space':
+      keys.jump = isPressed;
+      break;
+    default:
+      handled = false;
+      break;
+  }
+
+  if (handled && e.cancelable) {
+    e.preventDefault();
+  }
+
+  updateInputState();
+}
+
+// --- 2. ОБНОВЛЕНИЕ ОБЩЕГО СОСТОЯНИЯ ---
+function updateInputState() {
+  // Клавиатурный вектор
+  let kbX = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  let kbZ = (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0);
+
+  // Суммируем с мобильным джойстиком (если он активен)
+  let finalX = kbX + joystickMove.x;
+  let finalZ = kbZ + joystickMove.y;
+
+  // Ограничиваем вектор от -1 до 1
+  inputState.moveX = Math.max(-1, Math.min(1, finalX));
+  inputState.moveZ = Math.max(-1, Math.min(1, finalZ));
+  inputState.jump = keys.jump;
+}
+
+export function resetInput() {
+  keys.forward = keys.backward = keys.left = keys.right = keys.jump = false;
+  joystickMove.x = 0;
+  joystickMove.y = 0;
+  joystickTouchId = null;
+  updateInputState();
+}
+
+// --- 3. ИНИЦИАЛИЗАЦИЯ (КЛАВА + ТАЧ-СОБЫТИЯ) ---
+export function initControls() {
+  // Инициализация клавиатуры
+  window.addEventListener('keydown', (e) => handleKey(e, true));
+  window.addEventListener('keyup', (e) => handleKey(e, false));
+  window.addEventListener('blur', resetInput);
+
+  // Настройка тач-управления для мобилок
+  setupTouchControls();
+}
+
+function setupTouchControls() {
+  const joystickZone = document.getElementById('joystick-zone');
+  const joystickKnob = document.getElementById('joystick-knob');
+  const jumpBtn = document.getElementById('jump-btn');
+
+  // Сенсорная кнопка прыжка
+  if (jumpBtn) {
+    jumpBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      keys.jump = true;
+      updateInputState();
+    }, { passive: false });
+
+    jumpBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      keys.jump = false;
+      updateInputState();
+    }, { passive: false });
+  }
+
+  // Виртуальный джойстик
+  if (joystickZone && joystickKnob) {
+    joystickZone.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.changedTouches[0];
+      joystickTouchId = touch.identifier;
+
+      const rect = joystickZone.getBoundingClientRect();
+      joystickOrigin = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (joystickTouchId === null) return;
+
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === joystickTouchId) {
+          let dx = touch.clientX - joystickOrigin.x;
+          let dy = touch.clientY - joystickOrigin.y;
+
+          let dist = Math.hypot(dx, dy);
+          if (dist > JOYSTICK_RADIUS) {
+            dx = (dx / dist) * JOYSTICK_RADIUS;
+            dy = (dy / dist) * JOYSTICK_RADIUS;
+          }
+
+          // Визуальное смещение стика
+          joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+          // Переводим смещение в диапазон [-1, 1]
+          // dx — это влево/вправо (moveX), dy — это вперед/назад (moveZ, поэтому инвертируем)
+          joystickMove.x = dx / JOYSTICK_RADIUS;
+          joystickMove.y = -dy / JOYSTICK_RADIUS; 
+
+          updateInputState();
+          break;
+        }
+      }
+    }, { passive: false });
+
+    const stopJoystick = (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === joystickTouchId) {
+          joystickTouchId = null;
+          joystickMove.x = 0;
+          joystickMove.y = 0;
+          if (joystickKnob) {
+            joystickKnob.style.transform = 'translate(0px, 0px)';
+          }
+          updateInputState();
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('touchend', stopJoystick);
+    window.addEventListener('touchcancel', stopJoystick);
+  }
+}
+
+export function getInput() {
+  return inputState;
+}
