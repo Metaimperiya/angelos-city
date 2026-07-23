@@ -1,5 +1,5 @@
 // ============================================================
-// WEB SOCKET (МУЛЬТИПЛЕЕР)
+// WEB SOCKET (МУЛЬТИПЛЕЕР) — ЖЁСТКИЙ АДРЕС
 // ============================================================
 
 export let socket;
@@ -9,10 +9,9 @@ export const remotePlayers = {};
 export const remoteMeshes = {};
 
 export function initSocket() {
-  // ПРАВИЛЬНЫЙ АДРЕС ДЛЯ RENDER
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  socket = new WebSocket(`${protocol}//${host}`);
+  // ЖЁСТКИЙ АДРЕС — ВПИШИ СВОЙ ДОМЕН
+  const wsUrl = 'wss://angelos-city-3.onrender.com';
+  socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
     isConnected = true;
