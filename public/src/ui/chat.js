@@ -1,5 +1,5 @@
 // ============================================================
-// ЧАТ
+// ЧАТ (ФИКС 3: БЕЗОПАСНЫЙ)
 // ============================================================
 
 export function initChat() {
@@ -28,11 +28,22 @@ export function initChat() {
     chatInput.value = '';
   }
 
+  // ФИКС 3: textContent вместо innerHTML
   function addChatMessage(name, text, color = '#00f3ff') {
     const chatLog = document.getElementById('chat-log');
     const div = document.createElement('div');
     div.className = 'msg';
-    div.innerHTML = `<span class="name" style="color:${color}">${name}:</span> <span class="text">${text}</span>`;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'name';
+    nameSpan.style.color = color;
+    nameSpan.textContent = `${name}: `;
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'text';
+    textSpan.textContent = text;
+
+    div.append(nameSpan, textSpan);
     chatLog.appendChild(div);
     chatLog.scrollTop = chatLog.scrollHeight;
   }
