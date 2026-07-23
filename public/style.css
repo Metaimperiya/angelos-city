@@ -4,12 +4,14 @@
   box-sizing: border-box;
   touch-action: none;
 }
+
 body {
   overflow: hidden;
   background: #020208;
   font-family: monospace;
 }
 
+/* ===== ЗАГРУЗКА ===== */
 #loading {
   position: absolute;
   top: 50%;
@@ -26,23 +28,97 @@ body {
   100% { opacity: 1; }
 }
 
+/* ===== ИНФО ===== */
+#info {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #00f0ff;
+  background: rgba(0,0,0,0.7);
+  padding: 6px 16px;
+  border-radius: 10px;
+  font-size: 11px;
+  z-index: 100;
+  border: 1px solid #00f0ff;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#controls {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff007f;
+  background: rgba(0,0,0,0.7);
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  z-index: 100;
+  border: 1px solid #ff007f;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 #players-count {
   position: absolute;
-  top: 15px;
+  top: 60px;
   right: 15px;
   color: #00ff88;
   background: rgba(0,0,0,0.7);
   padding: 4px 12px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 12px;
   z-index: 100;
   border: 1px solid #00ff88;
   pointer-events: none;
 }
 
-#jump-btn {
+/* ===== МОБИЛЬНОЕ УПРАВЛЕНИЕ ===== */
+#joystick-area {
   position: absolute;
   bottom: 30px;
+  left: 30px;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: rgba(0, 243, 255, 0.15);
+  border: 2px solid rgba(0, 243, 255, 0.3);
+  z-index: 50;
+  touch-action: none;
+  display: none;
+}
+
+#joystick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(0, 243, 255, 0.5);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+  pointer-events: none;
+}
+
+#camera-area {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  z-index: 45;
+  touch-action: none;
+  display: none;
+}
+
+#jump-btn {
+  position: absolute;
+  bottom: 40px;
   right: 30px;
   width: 70px;
   height: 70px;
@@ -50,7 +126,7 @@ body {
   background: rgba(255, 0, 127, 0.25);
   border: 2px solid rgba(255, 0, 127, 0.5);
   color: #ff007f;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
   z-index: 50;
   display: none;
@@ -59,12 +135,38 @@ body {
   touch-action: none;
   user-select: none;
   font-family: monospace;
+  box-shadow: 0 0 30px rgba(255, 0, 127, 0.1);
 }
 #jump-btn:active {
   background: rgba(255, 0, 127, 0.4);
   transform: scale(0.92);
 }
 
+/* ===== ПОДСКАЗКА ПОВЕРНУТЬ ТЕЛЕФОН ===== */
+#rotate-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #00f3ff;
+  font-size: 24px;
+  z-index: 300;
+  background: rgba(0,0,0,0.9);
+  padding: 30px 40px;
+  border-radius: 20px;
+  border: 2px solid #00f3ff;
+  text-align: center;
+  display: none;
+  font-family: monospace;
+  text-shadow: 0 0 30px #00f3ff;
+}
+#rotate-hint span {
+  font-size: 60px;
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* ===== ЧАТ ===== */
 #chat {
   position: absolute;
   bottom: 80px;
@@ -80,6 +182,7 @@ body {
   border-radius: 12px;
   padding: 8px;
 }
+
 #chat-log {
   flex: 1;
   overflow-y: auto;
@@ -137,9 +240,19 @@ body {
 }
 #chat-toggle:hover { background: #00f3ff; color: #000; }
 
-@media (pointer: coarse) {
-  #jump-btn { display: flex; }
+/* ===== АДАПТАЦИЯ ПОД ТЕЛЕФОН ===== */
+@media (max-width: 768px) {
+  #joystick-area { display: block; width: 110px; height: 110px; bottom: 20px; left: 20px; }
+  #joystick-knob { width: 40px; height: 40px; }
+  #camera-area { display: block; }
+  #jump-btn { display: flex; width: 60px; height: 60px; bottom: 25px; right: 20px; font-size: 16px; }
+  #controls { font-size: 10px; top: 8px; padding: 3px 10px; }
+  #info { font-size: 10px; bottom: 80px; padding: 4px 12px; white-space: normal; }
+  #players-count { top: 50px; right: 10px; font-size: 11px; padding: 3px 10px; }
 }
-@media (pointer: fine) {
-  #jump-btn { display: none; }
+
+@media (pointer: coarse) {
+  #joystick-area { display: block; }
+  #camera-area { display: block; }
+  #jump-btn { display: flex; }
 }
