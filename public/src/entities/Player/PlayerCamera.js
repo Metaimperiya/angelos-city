@@ -1,5 +1,5 @@
 // ============================================================
-// КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА
+// КАМЕРА ОТ ТРЕТЬЕГО ЛИЦА С БЛОКИРОВКОЙ ПОЛА
 // ============================================================
 
 import * as THREE from 'three';
@@ -25,18 +25,27 @@ export const PlayerCamera = {
       this.euler.x -= input.touchLookY * this.sensitivity * 2;
     }
 
-    // Ограничение наклона вверх/вниз (чтобы камера не переворачивалась)
-    this.euler.x = Math.max(-0.6, Math.min(1.2, this.euler.x));
+    // Ограничиваем угол наклона камеры (не даём ей задираться слишком низко к земле)
+    this.euler.x = Math.max(-0.2, Math.min(1.2, this.euler.x));
 
-    // Сферические координаты орбиты камеры вокруг игрока
+    // Сферические координаты орбиты
     const horizDist = this.distance * Math.cos(this.euler.x);
     const vertDist = this.distance * Math.sin(this.euler.x);
 
     const targetY = playerPos.y + 1.5;
 
+    let targetCamY = targetY + vertDist;
+
+    // ⬇️ ЖЁСТКИЙ БАРЬЕР ПОЛА ⬇️
+    // Камера никогда не опустится ниже 0.4м от земли
+    const minCameraHeight = 0.4;
+    if (targetCamY < minCameraHeight) {
+      targetCamY = minCameraHeight;
+    }
+
     const targetCamPos = new THREE.Vector3(
       playerPos.x + horizDist * Math.sin(this.euler.y),
-      targetY + vertDist,
+      targetCamY,
       playerPos.z + horizDist * Math.cos(this.euler.y)
     );
 
