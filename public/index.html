@@ -6,6 +6,38 @@
   <title>🚢 Angelos City</title>
   <link rel="stylesheet" href="style.css" />
 
+  <style>
+    /* Гарантируем, что 3D-холст растянут на весь экран и лежит под UI */
+    canvas {
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 0 !important;
+      outline: none;
+    }
+
+    /* Все элементы UI поверх 3D */
+    #loading, #players-count, #jump-btn, #chat, #chat-toggle {
+      z-index: 10;
+      position: absolute;
+    }
+
+    /* Заставка не блочит экран */
+    #loading {
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: sans-serif;
+      pointer-events: none;
+    }
+  </style>
+
   <!-- Import Map для Three.js -->
   <script type="importmap">
     {
