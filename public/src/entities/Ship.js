@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ
+// КОРАБЛЬ (ИСПРАВЛЕННЫЙ)
 // ============================================================
 
 import * as THREE from 'three';
@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { scene } from '../core/scene.js';
 
 export let mainShip = null;
-export let shipSpawnPoint = { x: 0, y: 4, z: 0 };
+export let shipSpawnPoint = { x: 0, z: 0 };
 
 export function loadShip() {
   return new Promise((resolve) => {
@@ -15,26 +15,56 @@ export function loadShip() {
     loader.load(
       '/assets/models/karablik_Untitled.glb',
       (gltf) => {
-        const model = gltf.scene;
-        const container = new THREE.Group();
+        const shipModel = gltf.scene;
 
-        const box = new THREE.Box3().setFromObject(model);
+        // Создаем контейнер-оболочку для чистой работы с координатами
+        const shipContainer = new THREE.Group();
+
+        // Считаем размер и центр исходной 3D-модели
+        const box = new THREE.Box3().setFromObject(shipModel);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
 
-        model.position.sub(center);
-        container.add(model);
+        // Сдвигаем модель ВНУТРИ контейнера, чтобы её центр был в (0,0,0)
+        shipModel.position.sub(center);
+        shipContainer.add(shipModel);
 
-        const scale = 90 / Math.max(size.x, size.z);
-        container.scale.set(scale, scale, scale);
-        container.position.set(0, -3.5, 0);
+        // Масштабируем весь контейнер
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 8 / (maxDim || 1);
+        shipContainer.scale.set(scale, scale, scale);
 
-        scene.add(container);
-        mainShip = container;
+        // Включаем тени и настраиваем материалы
+        shipModel.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            if (child.material) {
+              child.material.metalness = 0.6;
+              child.material.roughness = 0.3;
+            }
+          }
+        });
 
-        shipSpawnPoint.y = (size.y * scale) * 0.35 - 3.5;
+        // Ставим контейнер с кораблем СТРОГО в центр мира (0, 0, 0)
+        shipContainer.position.set(0, 0, 0);
+        shipSpawnPoint = { x: 0, z: 0 };
 
-        console.log('✅ Корабль загружен!');
+        scene.add(shipContainer);
+        mainShip = shipContainer;
+
+        // Невидимая платформа для ходьбы (чтобы игрок не проваливался)
+        const platformGeo = new THREE.BoxGeometry(4, 0.2, 3);
+        const platformMat = new THREE.MeshPhongMaterial({
+          color: 0x00ff88,
+          transparent: true,
+          opacity: 0.0
+        });
+        const platform = new THREE.Mesh(platformGeo, platformMat);
+        platform.position.set(0, 0.2, 0);
+        shipContainer.add(platform);
+
+        console.log('✅ Корабль загружен и встал ровно в (0, 0, 0)!');
         resolve();
       },
       undefined,
@@ -46,6 +76,14 @@ export function loadShip() {
   });
 }
 
+// Защищенный телепорт — если корабль еще не загрузился, отдаст безопасные (0, 1.8, 0)
 export function teleportToShip() {
-  return mainShip ? { x: 0, y: shipSpawnPoint.y, z: 0 } : { x: 0, y: 4, z: 0 };
+  if (!mainShip) return { x: 0, y: 1.8, z: 0 };
+  const worldPos = new THREE.Vector3(0, 1.8, 0);
+  mainShip.localToWorld(worldPos);
+  return worldPos;
+}
+
+export function getShipPosition() {
+  return shipSpawnPoint;
 }
