@@ -4,8 +4,8 @@
 
 import { initScene, scene, camera, renderer } from './core/scene.js';
 import { createWorld } from './core/world.js';
-import { loadShip, teleportToShip } from './entities/Ship.js';
-import { createPlayer, updatePlayer, getPlayerPos } from './entities/Player.js';
+import { loadShip } from './entities/Ship.js';
+import { createPlayer, initControls } from './entities/Player.js';
 import { initSocket } from './network/socket.js';
 import { initChat } from './ui/chat.js';
 import { updateHUD } from './ui/hud.js';
@@ -23,16 +23,19 @@ createWorld();
 // 3. Загружаем корабль
 await loadShip();
 
-// 4. Создаём игрока
+// 4. Управление (мышь)
+initControls();
+
+// 5. Создаём игрока
 createPlayer();
 
-// 5. Сокет
+// 6. Сокет
 initSocket();
 
-// 6. Чат
+// 7. Чат
 initChat();
 
-// 7. HUD
+// 8. HUD
 updateHUD(1);
 
 // ============================================================
@@ -41,10 +44,6 @@ updateHUD(1);
 
 function animate() {
   requestAnimationFrame(animate);
-
-  // Обновление игрока
-  updatePlayer();
-
   renderer.render(scene, camera);
 }
 
