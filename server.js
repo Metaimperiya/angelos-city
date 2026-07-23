@@ -7,16 +7,14 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Раздаём статику
+// Раздаём статику из папки public
 app.use(express.static('public'));
 
-// Храним всех игроков
 const players = {};
 
 wss.on('connection', (ws) => {
   const id = Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
   
-  // Новый игрок
   players[id] = {
     x: (Math.random() - 0.5) * 10,
     z: (Math.random() - 0.5) * 10,
@@ -27,14 +25,12 @@ wss.on('connection', (ws) => {
 
   console.log(`🟢 Игрок ${id} подключился (${Object.keys(players).length} всего)`);
 
-  // Отправляем новому игроку всех существующих
   ws.send(JSON.stringify({
     type: 'init',
     players: players,
     myId: id
   }));
 
-  // Отправляем всем остальным, что новый игрок появился
   broadcast({
     type: 'playerJoin',
     id: id,
@@ -44,27 +40,21 @@ wss.on('connection', (ws) => {
     name: players[id].name
   }, ws);
 
-  // Обработка сообщений от клиента
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      
-      if (data.type === 'move') {
-        if (players[id]) {
-          players[id].x = data.x;
-          players[id].z = data.z;
-          players[id].rotation = data.rotation || 0;
-          
-          broadcast({
-            type: 'playerMove',
-            id: id,
-            x: data.x,
-            z: data.z,
-            rotation: data.rotation || 0
-          }, ws);
-        }
+      if (data.type === 'move' && players[id]) {
+        players[id].x = data.x;
+        players[id].z = data.z;
+        players[id].rotation = data.rotation || 0;
+        broadcast({
+          type: 'playerMove',
+          id: id,
+          x: data.x,
+          z: data.z,
+          rotation: data.rotation || 0
+        }, ws);
       }
-      
       if (data.type === 'chat') {
         broadcast({
           type: 'chat',
@@ -73,22 +63,16 @@ wss.on('connection', (ws) => {
           name: players[id]?.name || 'Игрок'
         }, ws);
       }
-    } catch (e) {
-      console.error('Ошибка парсинга:', e);
-    }
+    } catch (e) {}
   });
 
   ws.on('close', () => {
     console.log(`🔴 Игрок ${id} отключился`);
     delete players[id];
-    broadcast({
-      type: 'playerLeave',
-      id: id
-    });
+    broadcast({ type: 'playerLeave', id: id });
   });
 });
 
-// Рассылка всем, кроме отправителя
 function broadcast(data, exclude) {
   wss.clients.forEach((client) => {
     if (client !== exclude && client.readyState === WebSocket.OPEN) {
