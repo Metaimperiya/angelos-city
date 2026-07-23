@@ -6,53 +6,39 @@ import * as THREE from 'three';
 import { initScene, scene, camera, renderer } from './core/scene.js';
 import { createWorld } from './core/world.js';
 import { loadShip } from './entities/Ship.js';
-import { createPlayer, initControls, updatePlayer, setDelta } from './entities/Player/index.js';
-import { initSocket, socket } from './network/socket.js';
+import { createPlayer, initControlsWrapper, updatePlayer, setDelta } from './entities/Player/index.js';
+import { initSocket } from './network/socket.js';
 import { initSync } from './network/sync.js';
 import { initChat } from './ui/chat.js';
 import { updateHUD } from './ui/hud.js';
-
-// ============================================================
-// ИНИЦИАЛИЗАЦИЯ
-// ============================================================
 
 console.log('🚀 Запуск Angelos City...');
 
 initScene();
 createWorld();
 await loadShip();
-initControls();
+initControlsWrapper();
 createPlayer();
 initSocket();
-initSync(socket); // ← ПЕРЕДАЁМ СОКЕТ В СИНХРОНИЗАЦИЮ
+initSync(); // ← Вызываем без аргументов (sync.js сам забирает сообщения)
 initChat();
 updateHUD(1);
-
-console.log('✅ Все системы инициализированы');
-
-// ============================================================
-// ГЛАВНЫЙ ЦИКЛ
-// ============================================================
 
 const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
-  const delta = Math.min(clock.getDelta(), 0.05);
-  setDelta(delta);
+  setDelta(Math.min(clock.getDelta(), 0.05));
   updatePlayer();
   renderer.render(scene, camera);
 }
 
 animate();
 
-// ============================================================
-// RESIZE
-// ============================================================
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-console.log('🚢 Angelos City загружен и готов к работе!');
+console.log('🚢 Angelos City загружен!');
