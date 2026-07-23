@@ -1,58 +1,95 @@
-// ============================================================
-// ГЛАВНЫЙ ФАЙЛ
-// ============================================================
-
 import * as THREE from 'three';
-import { initScene, scene, camera, renderer } from './core/scene.js';
-import { createWorld } from './core/world.js';
-import { loadShip } from './entities/Ship.js';
-import { createPlayer, initControls, updatePlayer, setDelta } from './entities/Player/index.js';
-import { initSocket, socket } from './network/socket.js';
-import { initSync } from './network/sync.js';
-import { initChat } from './ui/chat.js';
-import { updateHUD } from './ui/hud.js';
+import { scene } from '../../core/scene.js';
 
 // ============================================================
-// ИНИЦИАЛИЗАЦИЯ
+// МОДУЛЬ ИГРОКА (Точно под сигнатуры из main.js)
 // ============================================================
 
-console.log('🚀 Запуск Angelos City...');
+const inputState = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false,
+  jump: false,
+  run: false
+};
 
-initScene();
-createWorld();
-await loadShip();
-initControls();
-createPlayer();
-initSocket();
-initSync(socket); // ← ПЕРЕДАЁМ СОКЕТ В СИНХРОНИЗАЦИЮ
-initChat();
-updateHUD(1);
+let currentDelta = 0;
+let playerMesh = null;
 
-console.log('✅ Все системы инициализированы');
-
-// ============================================================
-// ГЛАВНЫЙ ЦИКЛ
-// ============================================================
-
-const clock = new THREE.Clock();
-
-function animate() {
-  requestAnimationFrame(animate);
-  const delta = Math.min(clock.getDelta(), 0.05);
-  setDelta(delta);
-  updatePlayer();
-  renderer.render(scene, camera);
+export function getInput() {
+  return inputState;
 }
 
-animate();
+// Принимает дельту из главного цикла анимации
+export function setDelta(delta) {
+  if (delta !== undefined) {
+    currentDelta = delta;
+  }
+}
 
-// ============================================================
-// RESIZE
-// ============================================================
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+export const playerPos = new THREE.Vector3(0, 5, -15);
 
-console.log('🚢 Angelos City загружен и готов к работе!');
+export function initControls() {
+  // Защита от повторной навески слушателей
+  if (window._controlsInitialized) return;
+  window._controlsInitialized = true;
+
+  window.addEventListener('keydown', (e) => {
+    switch (e.code) {
+      case 'KeyW': case 'ArrowUp': inputState.forward = true; break;
+      case 'KeyS': case 'ArrowDown': inputState.backward = true; break;
+      case 'KeyA': case 'ArrowLeft': inputState.left = true; break;
+      case 'KeyD': case 'ArrowRight': inputState.right = true; break;
+      case 'Space': inputState.jump = true; break;
+      case 'ShiftLeft': case 'ShiftRight': inputState.run = true; break;
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    switch (e.code) {
+      case 'KeyW': case 'ArrowUp': inputState.forward = false; break;
+      case 'KeyS': case 'ArrowDown': inputState.backward = false; break;
+      case 'KeyA': case 'ArrowLeft': inputState.left = false; break;
+      case 'KeyD': case 'ArrowRight': inputState.right = false; break;
+      case 'Space': inputState.jump = false; break;
+      case 'ShiftLeft': case 'ShiftRight': inputState.run = false; break;
+    }
+  });
+
+  console.log('✅ Управление игроком инициализировано');
+}
+
+// Вызывается в main.js как createPlayer() без аргументов
+export function createPlayer() {
+  const geometry = new THREE.BoxGeometry(1, 2, 1);
+  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  playerMesh = new THREE.Mesh(geometry, material);
+  
+  playerMesh.position.copy(playerPos);
+  
+  if (scene) {
+    scene.add(playerMesh);
+    console.log('🟢 Игрок успешно добавлен на сцену');
+  } else {
+    console.error('❌ Ошибка: Сцена не найдена для создания игрока!');
+  }
+  
+  return playerMesh;
+}
+
+// Вызывается в main.js как updatePlayer() без аргументов в цикле animate()
+export function updatePlayer() {
+  const delta = currentDelta || 0.016;
+  const moveSpeed = 6.0 * delta;
+
+  if (inputState.forward) playerPos.z -= moveSpeed;
+  if (inputState.backward) playerPos.z += moveSpeed;
+  if (inputState.left) playerPos.x -= moveSpeed;
+  if (inputState.right) playerPos.x += moveSpeed;
+
+  // Синхронизируем визуальный меш с позицией
+  if (playerMesh) {
+    playerMesh.position.copy(playerPos);
+  }
+}
