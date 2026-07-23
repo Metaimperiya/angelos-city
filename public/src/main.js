@@ -7,7 +7,8 @@ import { initScene, scene, camera, renderer } from './core/scene.js';
 import { createWorld } from './core/world.js';
 import { loadShip } from './entities/Ship.js';
 import { createPlayer, initControls, updatePlayer, setDelta } from './entities/Player/index.js';
-import { initSocket } from './network/socket.js';
+import { initSocket, socket } from './network/socket.js';
+import { initSync } from './network/sync.js';
 import { initChat } from './ui/chat.js';
 import { updateHUD } from './ui/hud.js';
 
@@ -20,12 +21,10 @@ console.log('🚀 Запуск Angelos City...');
 initScene();
 createWorld();
 await loadShip();
-
-// ⬇️ ЭТОТ ВЫЗОВ ВКЛЮЧАЕТ МЫШКУ ⬇️
 initControls();
-
 createPlayer();
 initSocket();
+initSync(socket); // ← ПЕРЕДАЁМ СОКЕТ В СИНХРОНИЗАЦИЮ
 initChat();
 updateHUD(1);
 
