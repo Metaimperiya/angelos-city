@@ -1,5 +1,5 @@
 // ============================================================
-// СИНХРОНИЗАЦИЯ УДАЛЁННЫХ ИГРОКОВ (С ПОДДЕРЖКОЙ ВЫСОТЫ Y)
+// СИНХРОНИЗАЦИЯ ИГРОКОВ (sync.js)
 // ============================================================
 
 import * as THREE from 'three';
@@ -76,7 +76,7 @@ export function initSync() {
           break;
       }
     } catch (e) {
-      console.error('Ошибка парсинга:', e);
+      console.error('Ошибка парсинга сетевого сообщения:', e);
     }
   });
 }
@@ -85,7 +85,7 @@ export function addRemotePlayer(id, data) {
   if (remoteMeshes[id]) return;
   const color = data.color || 0xff4488;
   const mesh = createRemotePlayerMesh(color);
-  mesh.position.set(data.x || 0, data.y || 0, data.z || 0); // ← Ставим на правильную высоту Y
+  mesh.position.set(data.x || 0, data.y || 0, data.z || 0);
   scene.add(mesh);
   remoteMeshes[id] = mesh;
   remotePlayers[id] = data;
@@ -93,7 +93,7 @@ export function addRemotePlayer(id, data) {
 
 export function updateRemotePlayer(id, data) {
   if (remoteMeshes[id]) {
-    remoteMeshes[id].position.set(data.x || 0, data.y || 0, data.z || 0); // ← Обновляем Y при беге/прыжках
+    remoteMeshes[id].position.set(data.x || 0, data.y || 0, data.z || 0);
     if (data.rotation !== undefined) {
       remoteMeshes[id].rotation.y = data.rotation;
     }
@@ -133,7 +133,7 @@ export function sendPosition(x, y, z, rotation) {
   sendToServer({
     type: 'move',
     x: x,
-    y: y, // ← Отправляем высотную координату на сервер
+    y: y,
     z: z,
     rotation: rotation || 0
   });
