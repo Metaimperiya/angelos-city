@@ -1,5 +1,5 @@
 // ============================================================
-// ФИЗИКА И ДВИЖЕНИЕ (СТАБИЛЬНАЯ ВЕРСИЯ)
+// ФИЗИКА И ДВИЖЕНИЕ (РАБОЧИЙ ЭТАЛОН С RAYCASTING)
 // ============================================================
 
 import * as THREE from 'three';
@@ -73,7 +73,7 @@ export const PlayerController = {
       this.group.rotation.y = this.rotation;
     }
 
-    // Поиск палубы
+    // Ищем палубу под ногами
     let floorY = 0; // Вода по умолчанию
     if (mainShip) {
       rayOrigin.set(this.pos.x, this.pos.y + 3, this.pos.z);
