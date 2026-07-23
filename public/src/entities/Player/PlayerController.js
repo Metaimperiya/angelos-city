@@ -1,9 +1,10 @@
 // ============================================================
-// ФИЗИКА + ДВИЖЕНИЕ
+// ФИЗИКА + ДВИЖЕНИЕ (С ПРОВЕРКОЙ КОЛЛИЗИЙ КОРАБЛЯ)
 // ============================================================
 
 import * as THREE from 'three';
 import { PlayerCamera } from './PlayerCamera.js';
+import { checkShipCollision } from '../Ship.js'; // ← Импортируем проверку стен
 
 export const PlayerController = {
   group: null,
@@ -36,12 +37,21 @@ export const PlayerController = {
       const dx = (-normZ * sin + normX * cos) * speed * delta;
       const dz = (-normZ * cos - normX * sin) * speed * delta;
 
-      this.pos.x += dx;
-      this.pos.z += dz;
+      const nextX = this.pos.x + dx;
+      const nextZ = this.pos.z + dz;
+
+      // ⬇️ ПРОВЕРКА КОЛЛИЗИИ С КОРАБЛЕМ ⬇️
+      // Если спереди стенка корабля — не даем пройти по осям X и Z
+      if (!checkShipCollision(nextX, this.pos.z, this.pos.y)) {
+        this.pos.x = nextX;
+      }
+      if (!checkShipCollision(this.pos.x, nextZ, this.pos.y)) {
+        this.pos.z = nextZ;
+      }
+
       moved = true;
 
-      // ⬇️ ПРАВИЛЬНЫЙ ПОВОРОТ ПЕРСОНАЖА ⬇️
-      // Используем dx и dz (они учитывают угол камеры) без минусов, чтобы лицо смотрело вперёд
+      // Поворот персонажа
       this.rotation = Math.atan2(dx, dz);
       this.group.rotation.y = this.rotation;
     }
