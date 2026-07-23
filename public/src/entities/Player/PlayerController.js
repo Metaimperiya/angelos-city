@@ -25,16 +25,11 @@ export const PlayerController = {
     let moved = false;
 
     if (Math.abs(moveX) > 0.05 || Math.abs(moveZ) > 0.05) {
-      // Нормализуем ввод, чтобы по диагонали не бегать быстрее
       const len = Math.hypot(moveX, moveZ);
       const normX = moveX / len;
       const normZ = moveZ / len;
 
-      // Угол взгляда камеры по горизонтали
       const yaw = PlayerCamera.euler.y;
-
-      // Считаем направление относительно угла камеры
-      // normZ > 0 (W) бежит вперед (-sin, -cos)
       const sin = Math.sin(yaw);
       const cos = Math.cos(yaw);
 
@@ -45,8 +40,9 @@ export const PlayerController = {
       this.pos.z += dz;
       moved = true;
 
-      // Разворачиваем 3D-модельку игрока по направлению его хода
-      this.rotation = Math.atan2(-dx, -dz);
+      // ⬇️ ПРАВИЛЬНЫЙ ПОВОРОТ ПЕРСОНАЖА ⬇️
+      // Используем dx и dz (они учитывают угол камеры) без минусов, чтобы лицо смотрело вперёд
+      this.rotation = Math.atan2(dx, dz);
       this.group.rotation.y = this.rotation;
     }
 
