@@ -1,5 +1,5 @@
 // ============================================================
-// ГЛАВНЫЙ ФАЙЛ (С ДЕЛЬТА-ВРЕМЕНЕМ)
+// ГЛАВНЫЙ ФАЙЛ
 // ============================================================
 
 import { initScene, scene, camera, renderer } from './core/scene.js';
@@ -17,14 +17,17 @@ import { updateHUD } from './ui/hud.js';
 initScene();
 createWorld();
 await loadShip();
+
+// ФИКС 2: Включаем управление мышью
 initControls();
+
 createPlayer();
 initSocket();
 initChat();
 updateHUD(1);
 
 // ============================================================
-// ГЛАВНЫЙ ЦИКЛ С DELTA TIME
+// ГЛАВНЫЙ ЦИКЛ
 // ============================================================
 
 const clock = new THREE.Clock();
