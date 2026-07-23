@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (ТОЧНЫЙ СПАВН ПО ТВОИМ ЛОКАЛЬНЫМ КООРДИНАТАМ)
+// КОРАБЛЬ (220М + ИДЕАЛЬНАЯ ПОСАДКА + ПОЛНАЯ СОВМЕСТИМОСТЬ + КЛАВИША P)
 // ============================================================
 
 import * as THREE from 'three';
@@ -10,10 +10,8 @@ import { sendPosition } from '../network/sync.js';
 
 export let mainShip = null;
 
-// 🎯 ТВОИ ТОЧНЫЕ ЛОКАЛЬНЫЕ КООРДИНАТЫ НА КОРАБЛЕ
-export const SPAWN_LOCAL = { x: 0.21, y: 49.53, z: 23.56 };
-
-export let shipSpawnPoint = { x: 0, y: 10, z: 0 };
+// Возвращаем обязательную переменную, которую ждут остальные файлы!
+export let shipSpawnPoint = { x: 0, y: 12, z: -5 };
 
 export function loadShip() {
   return new Promise((resolve) => {
@@ -35,7 +33,7 @@ export function loadShip() {
 
         shipContainer.add(shipModel);
 
-        // 2. Размер 220м
+        // 2. 💥 УВЕЛИЧИВАЕМ ДО 220 МЕТРОВ
         const TARGET_SIZE = 220; 
         const maxDim = Math.max(size.x, size.z);
         const scale = TARGET_SIZE / (maxDim || 1);
@@ -52,47 +50,52 @@ export function loadShip() {
           }
         });
 
-        // 3. Посадка в воду
+        // 3. 🌊 ЗОЛОТАЯ СЕРЕДИНА ПОСАДКИ В ВОДУ
         const shipHeight = size.y * scale;
         shipContainer.position.set(0, -shipHeight * 0.24, 0);
 
         scene.add(shipContainer);
         mainShip = shipContainer;
 
-        // 4. 🎯 ПЕРЕВОДИМ ТВОИ ЛОКАЛЬНЫЕ КООРДИНАТЫ В МИРОВЫЕ
-        const localVec = new THREE.Vector3(SPAWN_LOCAL.x, SPAWN_LOCAL.y, SPAWN_LOCAL.z);
-        const worldVec = shipContainer.localToWorld(localVec);
+        // 4. Поиск высоты палубы в центре (x: 0, z: -5)
+        const raycaster = new THREE.Raycaster(
+          new THREE.Vector3(0, 100, -5),
+          new THREE.Vector3(0, -1, 0)
+        );
+        const hits = raycaster.intersectObject(shipContainer, true);
 
-        shipSpawnPoint = { 
-          x: worldVec.x, 
-          y: worldVec.y, 
-          z: worldVec.z 
-        };
+        if (hits.length > 0) {
+          shipSpawnPoint = { x: 0, y: hits[0].point.y + 0.8, z: -5 };
+        } else {
+          shipSpawnPoint = { x: 0, y: 10, z: -5 };
+        }
 
-        // Спавним игрока строго в выбранной тобой точке на палубе
+        // Спавн игрока строго на палубе
         if (playerPos) {
-          playerPos.x = shipSpawnPoint.x;
+          playerPos.x = shipSpawnPoint.x + (Math.random() - 0.5) * 2;
+          playerPos.z = shipSpawnPoint.z + (Math.random() - 0.5) * 2;
           playerPos.y = shipSpawnPoint.y;
-          playerPos.z = shipSpawnPoint.z;
           sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
         }
 
-        console.log('✅ Спавн точно настроен по твоим точкам:', SPAWN_LOCAL);
+        console.log('✅ Огромный корабль (220м) загружен! Точка спавна:', shipSpawnPoint);
         resolve();
       },
       undefined,
       (error) => {
         console.error('❌ Ошибка загрузки корабля:', error);
-        resolve();
+        resolve(); // Обязательно разрешаем Promise!
       }
     );
   });
 }
 
-// 📍 СКАНЕР ТОЧЕК НА КОРАБЛЕ (Клавиша 'P')
+// 📍 СКАНЕР ТОЧЕК НА КОРАБЛЕ (Нажми 'P' в игре!)
 window.addEventListener('keydown', (e) => {
   if ((e.code === 'KeyP' || e.key === 'p' || e.key === 'з') && mainShip && playerPos) {
     const playerWorldVec = new THREE.Vector3(playerPos.x, playerPos.y, playerPos.z);
+    
+    // Переводим мировые координаты игрока в локальные координаты корабля
     const shipLocalVec = mainShip.worldToLocal(playerWorldVec.clone());
 
     const coordsString = `x: ${shipLocalVec.x.toFixed(2)}, y: ${shipLocalVec.y.toFixed(2)}, z: ${shipLocalVec.z.toFixed(2)}`;
@@ -105,10 +108,5 @@ window.addEventListener('keydown', (e) => {
 });
 
 export function teleportToShip() {
-  if (mainShip) {
-    const localVec = new THREE.Vector3(SPAWN_LOCAL.x, SPAWN_LOCAL.y, SPAWN_LOCAL.z);
-    const worldVec = mainShip.localToWorld(localVec);
-    return { x: worldVec.x, y: worldVec.y, z: worldVec.z };
-  }
   return { ...shipSpawnPoint };
 }
