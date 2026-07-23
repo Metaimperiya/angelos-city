@@ -8,6 +8,9 @@ export let isConnected = false;
 export const remotePlayers = {};
 export const remoteMeshes = {};
 
+let lastSend = 0;
+const TICK_RATE = 20; // 20 обновлений в секунду
+
 export function initSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.host;
@@ -29,7 +32,6 @@ export function initSocket() {
       if (data.type === 'init') {
         myId = data.myId;
         console.log('Мой ID:', myId);
-        // Создаём удалённых игроков
         for (const id in data.players) {
           if (id !== myId) {
             addRemotePlayer(id, data.players[id]);
@@ -60,10 +62,12 @@ export function initSocket() {
   };
 }
 
-// ============================================================
-// ОТПРАВКА ПОЗИЦИИ
-// ============================================================
+// ФИКС 2: Tick Rate
 export function sendPosition(x, z, rotation) {
+  const now = performance.now();
+  if (now - lastSend < 1000 / TICK_RATE) return;
+  lastSend = now;
+
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
       type: 'move',
@@ -75,15 +79,16 @@ export function sendPosition(x, z, rotation) {
 }
 
 // ============================================================
-// УДАЛЁННЫЕ ИГРОКИ (ПОКА ЗАГЛУШКА)
+// УДАЛЁННЫЕ ИГРОКИ (ЗАГОТОВКА ПОД ИНТЕРПОЛЯЦИЮ)
 // ============================================================
 function addRemotePlayer(id, data) {
   console.log('👤 Новый игрок:', id);
-  // Здесь будет создание Mesh для удалённого игрока
+  // Здесь будет создание Mesh
 }
 
 function updateRemotePlayer(id, data) {
-  // Здесь будет обновление позиции
+  // ФИКС 5: Будет использоваться Lerp
+  // remoteMeshes[id].position.lerp(target, 0.2);
 }
 
 function removeRemotePlayer(id) {
