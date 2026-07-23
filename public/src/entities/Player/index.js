@@ -1,88 +1,83 @@
+// ============================================================
+// ИГРОК (СБОРКА)
+// ============================================================
+
 import * as THREE from 'three';
+import { scene, camera } from '../../core/scene.js';
+import { teleportToShip } from '../Ship.js';
+import { PlayerInput } from './PlayerInput.js';
+import { PlayerController } from './PlayerController.js';
+import { PlayerCamera } from './PlayerCamera.js';
+import { sendPosition } from '../../network/sync.js';
 
-// ============================================================
-// ЕДИНЫЙ ПОЛНЫЙ МОДУЛЬ ИГРОКА (Управление + Delta + Корабль)
-// ============================================================
+export let playerPos = { x: 0, z: 0, y: 0 };
+let playerGroup;
+let delta = 0;
 
-const inputState = {
-  forward: false,
-  backward: false,
-  left: false,
-  right: false,
-  jump: false,
-  run: false
-};
-
-let currentDelta = 0;
-
-export function getInput() {
-  return inputState;
+export function setDelta(value) {
+  delta = value;
 }
-
-// Функция, которую ждёт main.js для передачи времени кадра
-export function setDelta(delta) {
-  currentDelta = delta;
-}
-
-// Экспортируем позицию игрока для Ship.js
-export const playerPos = new THREE.Vector3(0, 5, -15);
 
 export function initControls() {
-  window.addEventListener('keydown', (e) => {
-    switch (e.code) {
-      case 'KeyW': case 'ArrowUp': inputState.forward = true; break;
-      case 'KeyS': case 'ArrowDown': inputState.backward = true; break;
-      case 'KeyA': case 'ArrowLeft': inputState.left = true; break;
-      case 'KeyD': case 'ArrowRight': inputState.right = true; break;
-      case 'Space': inputState.jump = true; break;
-      case 'ShiftLeft': case 'ShiftRight': inputState.run = true; break;
-    }
-  });
-
-  window.addEventListener('keyup', (e) => {
-    switch (e.code) {
-      case 'KeyW': case 'ArrowUp': inputState.forward = false; break;
-      case 'KeyS': case 'ArrowDown': inputState.backward = false; break;
-      case 'KeyA': case 'ArrowLeft': inputState.left = false; break;
-      case 'KeyD': case 'ArrowRight': inputState.right = false; break;
-      case 'Space': inputState.jump = false; break;
-      case 'ShiftLeft': case 'ShiftRight': inputState.run = false; break;
-    }
-  });
+  PlayerInput.init();
+  PlayerCamera.init(camera);
 }
 
-// Запускаем слушатели управления
-initControls();
+export function createPlayer() {
+  playerGroup = new THREE.Group();
+  scene.add(playerGroup);
 
-export function createPlayer(scene) {
-  const geometry = new THREE.BoxGeometry(1, 2, 1);
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const playerMesh = new THREE.Mesh(geometry, material);
-  
-  playerMesh.position.copy(playerPos);
-  if (scene) {
-    scene.add(playerMesh);
+  const color = 0x00ff88;
+  const bodyMat = new THREE.MeshPhongMaterial({ color, flatShading: true });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.6), bodyMat);
+  body.position.y = 0.7;
+  body.castShadow = true;
+  playerGroup.add(body);
+
+  const headMat = new THREE.MeshPhongMaterial({ color: 0xffccaa, flatShading: true });
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), headMat);
+  head.position.y = 1.5;
+  head.castShadow = true;
+  playerGroup.add(head);
+
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+  for (let side = -1; side <= 1; side += 2) {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), eyeMat);
+    eye.position.set(side * 0.2, 1.6, 0.35);
+    playerGroup.add(eye);
+
+    const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), pupilMat);
+    pupil.position.set(side * 0.2, 1.6, 0.45);
+    playerGroup.add(pupil);
   }
-  
-  return playerMesh;
+
+  // Спавн
+  const spawn = teleportToShip();
+  if (spawn) {
+    playerPos.x = spawn.x + (Math.random() - 0.5) * 4;
+    playerPos.z = spawn.z + (Math.random() - 0.5) * 4;
+    playerPos.y = spawn.y;
+  }
+
+  playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
+  PlayerController.init(playerGroup, playerPos);
+
+  // 💥 Мгновенно отправляем координаты на сервер, чтобы другие не видели нас под водой (Y=0)
+  sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
 }
 
-export function updatePlayer(shipContainer, playerMesh) {
-  const delta = currentDelta || 0.016;
-  const moveSpeed = 6.0 * delta;
+export function updatePlayer() {
+  const input = PlayerInput.getInput();
+  const moved = PlayerController.update(input, delta);
+  PlayerCamera.update(playerPos, input);
 
-  if (inputState.forward) playerPos.z -= moveSpeed;
-  if (inputState.backward) playerPos.z += moveSpeed;
-  if (inputState.left) playerPos.x -= moveSpeed;
-  if (inputState.right) playerPos.x += moveSpeed;
-
-  // Привязка к движущемуся кораблю через localToWorld
-  if (shipContainer) {
-    shipContainer.localToWorld(playerPos);
+  if (moved) {
+    sendPosition(playerPos.x, playerPos.y, playerPos.z, PlayerController.getRotation());
   }
+}
 
-  // Синхронизируем позицию меша с математической позицией
-  if (playerMesh) {
-    playerMesh.position.copy(playerPos);
-  }
+export function getPlayerPos() {
+  return playerPos;
 }
