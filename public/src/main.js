@@ -1,14 +1,14 @@
 // ============================================================
-// ГЛАВНЫЙ ФАЙЛ (точка входа)
+// ГЛАВНЫЙ ФАЙЛ (упрощённый)
 // ============================================================
 
 import { initScene, scene, camera, renderer } from './core/scene.js';
 import { createWorld } from './core/world.js';
+import { loadShip, teleportToShip } from './entities/Ship.js';
+import { createPlayer, updatePlayer, getPlayerPos } from './entities/Player.js';
 import { initSocket } from './network/socket.js';
 import { initChat } from './ui/chat.js';
 import { updateHUD } from './ui/hud.js';
-import { createPlayer, updatePlayer, getPlayerPos } from './entities/Player.js';
-import { loadShips, updateShips, getMainShip, teleportToMainShip } from './entities/Ship.js';
 
 // ============================================================
 // ИНИЦИАЛИЗАЦИЯ
@@ -20,19 +20,25 @@ initScene();
 // 2. Мир (море)
 createWorld();
 
-// 3. Корабли
-await loadShips();
+// 3. Загружаем один корабль
+await loadShip();
 
-// 4. Игрок
+// 4. Создаём игрока и ставим на палубу
 createPlayer();
+const spawnPos = teleportToShip();
+if (spawnPos) {
+  const playerPos = getPlayerPos();
+  playerPos.x = spawnPos.x;
+  playerPos.z = spawnPos.z;
+}
 
-// 5. Сокет (мультиплеер)
+// 5. Сокет
 initSocket();
 
 // 6. Чат
 initChat();
 
-// 7. HUD (счётчик игроков)
+// 7. HUD
 updateHUD(1);
 
 // ============================================================
@@ -42,13 +48,9 @@ updateHUD(1);
 function animate() {
   requestAnimationFrame(animate);
 
-  // Движение кораблей
-  updateShips();
-
   // Обновление игрока
   updatePlayer();
 
-  // Рендер
   renderer.render(scene, camera);
 }
 
