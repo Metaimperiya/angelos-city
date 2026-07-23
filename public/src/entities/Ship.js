@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (ПОДНЯТ ИЗ ВОДЫ + УВЕЛИЧЕН ДО 160М + ЦЕНТР ПАЛУБЫ)
+// КОРАБЛЬ (220М + ИДЕАЛЬНАЯ ПОСАДКА + ЛОКАЛЬНЫЕ КООРДИНАТЫ + КЛАВИША P)
 // ============================================================
 
 import * as THREE from 'three';
@@ -9,7 +9,9 @@ import { playerPos } from './Player/index.js';
 import { sendPosition } from '../network/sync.js';
 
 export let mainShip = null;
-export let shipSpawnPoint = { x: 0, z: -5, y: 8 };
+
+// ЛОКАЛЬНАЯ точка спавна относительно центра корабля
+export const shipLocalSpawn = { x: 0, y: 14, z: -5 };
 
 export function loadShip() {
   return new Promise((resolve) => {
@@ -31,8 +33,8 @@ export function loadShip() {
 
         shipContainer.add(shipModel);
 
-        // 2. 💥 УВЕЛИЧИВАЕМ ДО 160М (отличный солидный размер)
-        const TARGET_SIZE = 160; 
+        // 2. 💥 УВЕЛИЧИВАЕМ ДО 220 МЕТРОВ (Огромный корабль)
+        const TARGET_SIZE = 220; 
         const maxDim = Math.max(size.x, size.z);
         const scale = TARGET_SIZE / (maxDim || 1);
         shipContainer.scale.set(scale, scale, scale);
@@ -48,36 +50,26 @@ export function loadShip() {
           }
         });
 
-        // 3. 🌊 ПОДНИМАЕМ ИЗ ВОДЫ (уменьшили коэффициент погружения)
+        // 3. 🌊 ЗОЛОТАЯ СЕРЕДИНА ПОСАДКИ (опустили чуть ниже)
         const shipHeight = size.y * scale;
-        shipContainer.position.set(0, -shipHeight * 0.18, 0);
+        shipContainer.position.set(0, -shipHeight * 0.26, 0);
 
         scene.add(shipContainer);
         mainShip = shipContainer;
 
-        // 4. 📍 ТОЧНЫЙ СПАВН В ЦЕНТРЕ ПАЛУБЫ
-        // Стреляем лучом сверху вниз в точку (x: 0, z: -5) — это ровно центр основной палубы
-        const raycaster = new THREE.Raycaster(
-          new THREE.Vector3(0, 100, -5),
-          new THREE.Vector3(0, -1, 0)
-        );
-        const hits = raycaster.intersectObject(shipContainer, true);
+        // 4. Переводим локальную точку спавна в мировые координаты для игрока
+        const localSpawnVec = new THREE.Vector3(shipLocalSpawn.x, shipLocalSpawn.y, shipLocalSpawn.z);
+        const worldSpawnVec = shipContainer.localToWorld(localSpawnVec.clone());
 
-        if (hits.length > 0) {
-          shipSpawnPoint = { x: 0, y: hits[0].point.y + 0.8, z: -5 };
-        } else {
-          shipSpawnPoint = { x: 0, y: 8, z: -5 };
-        }
-
-        // Телепортируем нашего игрока строго на центр палубы
+        // Спавним игрока
         if (playerPos) {
-          playerPos.x = shipSpawnPoint.x + (Math.random() - 0.5) * 3;
-          playerPos.z = shipSpawnPoint.z + (Math.random() - 0.5) * 3;
-          playerPos.y = shipSpawnPoint.y;
+          playerPos.x = worldSpawnVec.x + (Math.random() - 0.5) * 2;
+          playerPos.z = worldSpawnVec.z + (Math.random() - 0.5) * 2;
+          playerPos.y = worldSpawnVec.y;
           sendPosition(playerPos.x, playerPos.y, playerPos.z, 0);
         }
 
-        console.log('✅ Корабль поднят над водой и выровнен! Высота палубы Y:', shipSpawnPoint.y);
+        console.log('✅ Огромный корабль (220м) готов!');
         resolve();
       },
       undefined,
@@ -89,6 +81,28 @@ export function loadShip() {
   });
 }
 
+// 📍 СКАНЕР ТОЧЕК НА КОРАБЛЕ (Нажми 'P' в игре!)
+window.addEventListener('keydown', (e) => {
+  if ((e.code === 'KeyP' || e.key === 'p' || e.key === 'з') && mainShip && playerPos) {
+    const playerWorldVec = new THREE.Vector3(playerPos.x, playerPos.y, playerPos.z);
+    
+    // Переводим текущие мировые координаты игрока в локальные координаты корабля
+    const shipLocalVec = mainShip.worldToLocal(playerWorldVec.clone());
+
+    const coordsString = `x: ${shipLocalVec.x.toFixed(2)}, y: ${shipLocalVec.y.toFixed(2)}, z: ${shipLocalVec.z.toFixed(2)}`;
+    
+    console.log('%c 🎯 ЛОКАЛЬНАЯ ТОЧКА НА КОРАБЛЕ:', 'background: #222; color: #bada55; font-size: 16px');
+    console.log(coordsString);
+
+    alert(`📍 Координаты точки на корабле:\n\n${coordsString}\n\n(Запомни или скопируй из F12)`);
+  }
+});
+
 export function teleportToShip() {
-  return { ...shipSpawnPoint };
+  if (mainShip) {
+    const localVec = new THREE.Vector3(shipLocalSpawn.x, shipLocalSpawn.y, shipLocalSpawn.z);
+    const worldVec = mainShip.localToWorld(localVec);
+    return { x: worldVec.x, y: worldVec.y, z: worldVec.z };
+  }
+  return { x: 0, y: 10, z: 0 };
 }
