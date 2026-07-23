@@ -1,59 +1,28 @@
 // ============================================================
-// WEB SOCKET (ТОЛЬКО ПОДКЛЮЧЕНИЕ И ТРАНСПОРТ)
+// WEB SOCKET (МУЛЬТИПЛЕЕР)
 // ============================================================
-export let socket = null;
-export let isConnected = false;
-let reconnectTimer = null;
-let onMessageHandler = null;
 
-export function onMessage(handler) {
-  onMessageHandler = handler;
-}
+export let socket;
+export let myId = '';
+export let isConnected = false;
+export const remotePlayers = {};
+export const remoteMeshes = {};
 
 export function initSocket() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-
-  socket = new WebSocket(`${protocol}//${host}`);
+  socket = new WebSocket(`wss://${window.location.hostname}`);
 
   socket.onopen = () => {
     isConnected = true;
     console.log('🟢 Подключено к серверу');
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl) {
-      loadingEl.textContent = '✅ Подключено!';
-      setTimeout(() => { loadingEl.style.display = 'none'; }, 1000);
-    }
+    // Здесь будет логика подключения
   };
 
   socket.onmessage = (event) => {
-    if (onMessageHandler) {
-      onMessageHandler(event);
-    }
+    // Обработка сообщений
   };
 
   socket.onclose = () => {
     isConnected = false;
     console.log('🔴 Отключено от сервера');
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl) loadingEl.textContent = '❌ Потеря соединения';
-
-    if (reconnectTimer) clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(() => {
-      console.log('🔄 Переподключение...');
-      initSocket();
-    }, 3000);
   };
-
-  socket.onerror = (error) => {
-    console.error('❌ Ошибка WebSocket:', error);
-  };
-}
-
-export function sendToServer(data) {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(data));
-  } else {
-    console.warn('⚠️ Сокет не открыт, данные не отправлены');
-  }
 }
