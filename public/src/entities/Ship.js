@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (СТАБИЛЬНАЯ ВЕРСИЯ - 1 КОРАБЛЬ НА ВОДЕ)
+// КОРАБЛЬ (РАБОЧИЙ ЭТАЛОН — ПОСАЖЕН НА ВОДУ + ТОЧНЫЙ СПАВН)
 // ============================================================
 
 import * as THREE from 'three';
@@ -31,7 +31,7 @@ export function loadShip() {
 
         shipContainer.add(shipModel);
 
-        // 2. Масштаб (130м)
+        // 2. Размер 130м (оптимальный)
         const TARGET_SIZE = 130; 
         const maxDim = Math.max(size.x, size.z);
         const scale = TARGET_SIZE / (maxDim || 1);
@@ -48,14 +48,14 @@ export function loadShip() {
           }
         });
 
-        // 3. Посадка на воду
+        // 3. Посадка на воду (опускаем киль)
         const shipHeight = size.y * scale;
         shipContainer.position.set(0, -shipHeight * 0.35, 0);
 
         scene.add(shipContainer);
         mainShip = shipContainer;
 
-        // 4. Поиск высоты палубы
+        // 4. Высота палубы
         const raycaster = new THREE.Raycaster(
           new THREE.Vector3(0, 100, 0),
           new THREE.Vector3(0, -1, 0)
@@ -68,7 +68,7 @@ export function loadShip() {
           shipSpawnPoint = { x: 0, y: 5, z: 0 };
         }
 
-        // Спавн игрока
+        // Спавн игрока на палубе
         if (playerPos) {
           playerPos.x = shipSpawnPoint.x + (Math.random() - 0.5) * 4;
           playerPos.z = shipSpawnPoint.z + (Math.random() - 0.5) * 4;
@@ -82,7 +82,7 @@ export function loadShip() {
       undefined,
       (error) => {
         console.error('❌ Ошибка загрузки корабля:', error);
-        resolve();
+        resolve(); // Обязательно разрешаем Promise даже при ошибке!
       }
     );
   });
