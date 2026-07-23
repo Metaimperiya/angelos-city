@@ -9,20 +9,34 @@ export const remotePlayers = {};
 export const remoteMeshes = {};
 
 export function initSocket() {
-  socket = new WebSocket(`wss://${window.location.hostname}`);
+  // ПРАВИЛЬНЫЙ АДРЕС ДЛЯ RENDER
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  socket = new WebSocket(`${protocol}//${host}`);
 
   socket.onopen = () => {
     isConnected = true;
     console.log('🟢 Подключено к серверу');
-    // Здесь будет логика подключения
+    // Отправляем приветствие серверу
+    socket.send(JSON.stringify({
+      type: 'join',
+      name: 'Игрок_' + Math.random().toString(36).substr(2, 4),
+      x: 0,
+      z: 0
+    }));
   };
 
   socket.onmessage = (event) => {
-    // Обработка сообщений
+    console.log('📩 Получено сообщение:', event.data);
+    // Обработка сообщений будет добавлена позже
   };
 
   socket.onclose = () => {
     isConnected = false;
     console.log('🔴 Отключено от сервера');
+  };
+
+  socket.onerror = (error) => {
+    console.error('❌ Ошибка WebSocket:', error);
   };
 }
