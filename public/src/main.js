@@ -1,56 +1,66 @@
 // ============================================================
-// ГЛАВНЫЙ ФАЙЛ
+// ГЛАВНЫЙ ФАЙЛ (точка входа)
 // ============================================================
 
-import * as THREE from 'three';
 import { initScene, scene, camera, renderer } from './core/scene.js';
 import { createWorld } from './core/world.js';
-import { loadShip } from './entities/Ship.js';
-import { createPlayer, initControls, updatePlayer, setDelta } from './entities/Player/index.js';
-import { initSocket, socket } from './network/socket.js';
-import { initSync } from './network/sync.js';
+import { initSocket } from './network/socket.js';
 import { initChat } from './ui/chat.js';
 import { updateHUD } from './ui/hud.js';
+import { createPlayer, updatePlayer, getPlayerPos } from './entities/Player.js';
+import { loadShips, updateShips, getMainShip, teleportToMainShip } from './entities/Ship.js';
 
-console.log('🚀 Запуск Angelos City...');
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================
 
+// 1. Сцена
 initScene();
+
+// 2. Мир (море)
 createWorld();
-await loadShip();
-initControls();
+
+// 3. Корабли
+await loadShips();
+
+// 4. Игрок
 createPlayer();
+
+// 5. Сокет (мультиплеер)
 initSocket();
-initSync(socket);
+
+// 6. Чат
 initChat();
+
+// 7. HUD (счётчик игроков)
 updateHUD(1);
 
-console.log('✅ Все системы инициализированы');
-
-const clock = new THREE.Clock();
+// ============================================================
+// ГЛАВНЫЙ ЦИКЛ
+// ============================================================
 
 function animate() {
   requestAnimationFrame(animate);
-  const delta = Math.min(clock.getDelta(), 0.05);
-  setDelta(delta);
 
-  try {
-    updatePlayer();
-  } catch (e) {
-    console.error('Ошибка в updatePlayer:', e);
-  }
+  // Движение кораблей
+  updateShips();
 
-  if (renderer && scene && camera) {
-    renderer.render(scene, camera);
-  }
+  // Обновление игрока
+  updatePlayer();
+
+  // Рендер
+  renderer.render(scene, camera);
 }
 
 animate();
 
+// ============================================================
+// RESIZE
+// ============================================================
 window.addEventListener('resize', () => {
-  if (!camera || !renderer) return;
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-console.log('🚢 Angelos City загружен и готов к работе!');
+console.log('🚢 Angelos City загружен!');
