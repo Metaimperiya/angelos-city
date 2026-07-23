@@ -1,5 +1,5 @@
 // ============================================================
-// КОРАБЛЬ (ИСПРАВЛЕННЫЙ)
+// КОРАБЛЬ (ГИГАНТСКИЙ И НА ВОДЕ)
 // ============================================================
 
 import * as THREE from 'three';
@@ -7,7 +7,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { scene } from '../core/scene.js';
 
 export let mainShip = null;
-export let shipSpawnPoint = { x: 0, z: 0 };
+export let shipSpawnPoint = { x: 0, z: 0, y: 4 };
+export let shipBoundingBox = new THREE.Box3();
 
 export function loadShip() {
   return new Promise((resolve) => {
@@ -16,55 +17,56 @@ export function loadShip() {
       '/assets/models/karablik_Untitled.glb',
       (gltf) => {
         const shipModel = gltf.scene;
-
-        // Создаем контейнер-оболочку для чистой работы с координатами
         const shipContainer = new THREE.Group();
 
-        // Считаем размер и центр исходной 3D-модели
+        // 1. Считаем размеры
         const box = new THREE.Box3().setFromObject(shipModel);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
 
-        // Сдвигаем модель ВНУТРИ контейнера, чтобы её центр был в (0,0,0)
-        shipModel.position.sub(center);
+        // 2. Центрируем модель
+        shipModel.position.x = -center.x;
+        shipModel.position.z = -center.z;
+        shipModel.position.y = -box.min.y; // Дно на уровне 0 группы
+
         shipContainer.add(shipModel);
 
-        // Масштабируем весь контейнер
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 8 / (maxDim || 1);
+        // 3. УВЕЛИЧИВАЕМ ДО 90 (Гигантский масштаб)
+        const TARGET_SIZE = 90; 
+        const maxDim = Math.max(size.x, size.z);
+        const scale = TARGET_SIZE / (maxDim || 1);
         shipContainer.scale.set(scale, scale, scale);
 
-        // Включаем тени и настраиваем материалы
+        // Настройка теней и блеска
         shipModel.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
             if (child.material) {
-              child.material.metalness = 0.6;
-              child.material.roughness = 0.3;
+              child.material.metalness = 0.4;
+              child.material.roughness = 0.5;
             }
           }
         });
 
-        // Ставим контейнер с кораблем СТРОГО в центр мира (0, 0, 0)
-        shipContainer.position.set(0, 0, 0);
-        shipSpawnPoint = { x: 0, z: 0 };
+        // 4. ОПУСКАЕМ НА ВОДУ (киль уходит чуть под воду)
+        shipContainer.position.set(0, -3.5, 0);
 
         scene.add(shipContainer);
         mainShip = shipContainer;
 
-        // Невидимая платформа для ходьбы (чтобы игрок не проваливался)
-        const platformGeo = new THREE.BoxGeometry(4, 0.2, 3);
-        const platformMat = new THREE.MeshPhongMaterial({
-          color: 0x00ff88,
-          transparent: true,
-          opacity: 0.0
-        });
-        const platform = new THREE.Mesh(platformGeo, platformMat);
-        platform.position.set(0, 0.2, 0);
-        shipContainer.add(platform);
+        // Пересчитываем хитбокс
+        shipBoundingBox.setFromObject(shipContainer);
 
-        console.log('✅ Корабль загружен и встал ровно в (0, 0, 0)!');
+        // Точка спавна на палубе
+        const deckY = (size.y * scale) * 0.35 - 3.5;
+        shipSpawnPoint = { 
+          x: 0, 
+          y: Math.max(deckY, 3.5), 
+          z: 0 
+        };
+
+        console.log('✅ Корабль увеличен до 90м и опущен на воду!');
         resolve();
       },
       undefined,
@@ -76,14 +78,23 @@ export function loadShip() {
   });
 }
 
-// Защищенный телепорт — если корабль еще не загрузился, отдаст безопасные (0, 1.8, 0)
 export function teleportToShip() {
-  if (!mainShip) return { x: 0, y: 1.8, z: 0 };
-  const worldPos = new THREE.Vector3(0, 1.8, 0);
-  mainShip.localToWorld(worldPos);
-  return worldPos;
+  if (!mainShip) return { x: 0, y: 4, z: 0 };
+  return { ...shipSpawnPoint };
 }
 
-export function getShipPosition() {
-  return shipSpawnPoint;
+// Починенная проверка коллизий — больше не зажимает игрока в тиски
+export function checkShipCollision(nextX, nextZ, playerY) {
+  if (!mainShip || shipBoundingBox.isEmpty()) return false;
+
+  // Если игрок уже на палубе или выше воды — не блокируем
+  if (playerY >= shipSpawnPoint.y - 1.0) return false;
+
+  // Безопасные границы корпуса (учитываем только сам центр корабля)
+  const minX = shipBoundingBox.min.x + 3;
+  const maxX = shipBoundingBox.max.x - 3;
+  const minZ = shipBoundingBox.min.z + 3;
+  const maxZ = shipBoundingBox.max.z - 3;
+
+  return (nextX > minX && nextX < maxX && nextZ > minZ && nextZ < maxZ);
 }
