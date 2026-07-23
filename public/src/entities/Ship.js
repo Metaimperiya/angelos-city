@@ -7,6 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { scene } from '../core/scene.js';
 
 export let mainShip = null;
+export let shipSpawnPoint = { x: 0, z: 0 };
 
 export function loadShip() {
   return new Promise((resolve) => {
@@ -37,11 +38,17 @@ export function loadShip() {
           }
         });
 
+        // ⬇️ СТАВИМ КОРАБЛЬ ТАМ, ГДЕ ПОЯВЛЯЮТСЯ ИГРОКИ ⬇️
+        // Координаты (0, 0) — центр мира
+        ship.position.x = 0;
+        ship.position.z = 0;
+        shipSpawnPoint = { x: 0, z: 0 };
+
         scene.add(ship);
         mainShip = ship;
 
-        // Невидимая платформа
-        const platformGeo = new THREE.BoxGeometry(3, 0.2, 2);
+        // Невидимая платформа для ходьбы
+        const platformGeo = new THREE.BoxGeometry(4, 0.2, 3);
         const platformMat = new THREE.MeshPhongMaterial({
           color: 0x00ff88,
           transparent: true,
@@ -68,4 +75,8 @@ export function teleportToShip() {
   const worldPos = new THREE.Vector3(0, 1.8, 0);
   mainShip.localToWorld(worldPos);
   return worldPos;
+}
+
+export function getShipPosition() {
+  return shipSpawnPoint;
 }
