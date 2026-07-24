@@ -2,7 +2,7 @@
 // ЧАТ (С СЕТЕВЫМ СИНХРОНОМ И ЗАЩИТОЙ ВВОДА)
 // ============================================================
 
-import { sendToServer, socket } from '../network/socket.js';
+import { sendToServer } from '../network/socket.js';
 
 export function initChat() {
   const chatToggle = document.getElementById('chat-toggle');
@@ -11,56 +11,67 @@ export function initChat() {
   const chatSend = document.getElementById('chat-send');
   let chatVisible = false;
 
-  function toggleChat(show) {
-    if (!chatEl) return;
+  // ✅ ПОКАЗЫВАЕМ КНОПКУ ЧАТА (была скрыта в CSS)
+  if (chatToggle) {
+    chatToggle.style.display = 'block';
+    chatToggle.style.position = 'absolute';
+    chatToggle.style.bottom = '10px';
+    chatToggle.style.left = '10px';
+    chatToggle.style.zIndex = '99';
+    chatToggle.style.background = 'rgba(0,0,0,0.7)';
+    chatToggle.style.border = '1px solid #00f3ff';
+    chatToggle.style.color = '#00f3ff';
+    chatToggle.style.padding = '6px 14px';
+    chatToggle.style.borderRadius = '20px';
+    chatToggle.style.cursor = 'pointer';
+    chatToggle.style.fontFamily = 'monospace';
+    chatToggle.style.fontSize = '12px';
+  }
 
+  function toggleChat(show) {
     chatVisible = show !== undefined ? show : !chatVisible;
-    chatEl.style.display = chatVisible ? 'flex' : 'none';
+    
+    if (chatEl) {
+      chatEl.style.display = chatVisible ? 'flex' : 'none';
+    }
 
     if (chatVisible) {
-      // 1. При открытии чата отпускаем мышку из Pointer Lock
+      // При открытии чата отпускаем мышку, чтобы можно было печатать
       if (document.pointerLockElement) {
         document.exitPointerLock();
       }
-      // 2. Ставим фокус в инпут с микрозадержкой для стабильности
-      setTimeout(() => chatInput?.focus(), 50);
+      if (chatInput) {
+        chatInput.focus();
+      }
     } else {
-      chatInput?.blur();
+      if (chatInput) {
+        chatInput.blur();
+      }
     }
   }
 
-  // Клики по UI кнопкам (если они есть в HTML)
-  chatToggle?.addEventListener('click', () => toggleChat());
-  chatSend?.addEventListener('click', sendChat);
+  // Навешиваем события
+  if (chatToggle) {
+    chatToggle.addEventListener('click', () => toggleChat());
+  }
 
-  // Обработка клавиш ВНУТРИ поля ввода
-  chatInput?.addEventListener('keydown', (e) => {
-    e.stopPropagation(); // Чтобы нажатия клавиш (WASD, Пробел) не уходили игроку
+  if (chatSend) {
+    chatSend.addEventListener('click', sendChat);
+  }
 
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      sendChat();
-      toggleChat(false); // Закрываем чат после отправки
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      toggleChat(false);
-    }
-  });
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // Чтобы нажатия клавиш в чате не уходили в управление игроком
 
-  // 🎯 ГЛОБАЛЬНЫЙ СЛУШАТЕЛЬ: Открытие чата на Enter или T (Е)
-  window.addEventListener('keydown', (e) => {
-    // Если чат закрыт и мы не печатаем в другом инпуте
-    if (!chatVisible && document.activeElement !== chatInput) {
-      if (e.key === 'Enter' || e.code === 'KeyT') {
-        e.preventDefault();
-        toggleChat(true);
+      if (e.key === 'Enter') {
+        sendChat();
+        toggleChat(false); // Закрываем чат после отправки
       }
-    } else if (chatVisible && e.key === 'Escape') {
-      e.preventDefault();
-      toggleChat(false);
-    }
-  });
+      if (e.key === 'Escape') {
+        toggleChat(false);
+      }
+    });
+  }
 
   function sendChat() {
     if (!chatInput) return;
@@ -71,27 +82,28 @@ export function initChat() {
     addChatMessage('Я', text, '#00ff88');
 
     // 2. Отправляем на сервер для остальных игроков
-    try {
-      if (typeof sendToServer === 'function') {
-        sendToServer({ type: 'chat', text: text });
-      } else if (socket && socket.connected) {
-        socket.emit('chatMessage', { text: text });
-      }
-    } catch (err) {
-      console.error('Ошибка отправки сообщения в чат:', err);
-    }
+    sendToServer({
+      type: 'chat',
+      text: text
+    });
 
     chatInput.value = '';
   }
 
+  // Делаем доступным глобально для отладки
   window.toggleChat = toggleChat;
-  console.log('💬 Чат инициализирован (Открытие на Enter / T)');
+  window.sendChat = sendChat;
+
+  console.log('💬 Чат инициализирован и готов к работе!');
 }
 
-// Экспортируем функцию для добавления сообщений (вызывается из sync.js)
+// Экспортируем функцию, чтобы sync.js мог вызывать её при входящих сообщениях
 export function addChatMessage(name, text, color = '#00f3ff') {
   const chatLog = document.getElementById('chat-log');
-  if (!chatLog) return;
+  if (!chatLog) {
+    console.warn('⚠️ chat-log не найден');
+    return;
+  }
 
   const div = document.createElement('div');
   div.className = 'msg';
